@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+
+.env
+.venv/
+venv/
+
+mono.db
+
+static/uploads/products/*
+!static/uploads/products/.gitkeep
+
+.DS_Store
+Thumbs.db

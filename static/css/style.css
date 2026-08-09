@@ -1,0 +1,525 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #ffffff;
+    color: #222;
+}
+
+header {
+    border-bottom: 1px solid #eeeeee;
+    background: white;
+}
+
+.header-container {
+    max-width: 1500px;
+    min-height: 70px;
+
+    margin: 0 auto;
+    padding: 0 30px;
+
+    display: flex;
+    align-items: center;
+
+    gap: 40px;
+}
+
+.logo {
+    font-size: 28px;
+    font-weight: bold;
+    color: #111;
+    text-decoration: none;
+}
+
+nav {
+    flex: 1;
+
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+
+    gap: 22px;
+
+    white-space: nowrap;
+}
+
+nav a {
+    color: #222;
+    text-decoration: none;
+
+    font-size: 14px;
+    font-weight: 500;
+}
+
+nav a:hover {
+    font-weight: 700;
+}
+nav a:hover {
+    color: #777;
+}
+
+.hero {
+    height: 300px;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    background: #f5f5f5;
+}
+
+.hero h1 {
+    font-size: 48px;
+    margin-bottom: 15px;
+}
+
+.hero p {
+    color: #666;
+}
+
+main {
+    max-width: 1200px;
+    margin: auto;
+    padding: 60px 20px;
+}
+
+.products h2 {
+    margin-bottom: 30px;
+}
+
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 25px;
+}
+
+.product-card {
+    cursor: pointer;
+}
+
+.product-image {
+    height: 260px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: #eeeeee;
+    color: #999;
+
+    border-radius: 8px;
+}
+
+.product-card h3 {
+    margin-top: 15px;
+    font-size: 17px;
+}
+
+.price {
+    margin-top: 8px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+footer {
+    margin-top: 80px;
+    padding: 30px;
+
+    text-align: center;
+
+    border-top: 1px solid #eeeeee;
+
+    color: #777;
+}
+
+.admin-section {
+    max-width: 700px;
+    margin: auto;
+}
+
+.admin-section h1 {
+    margin-bottom: 30px;
+}
+
+.product-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.product-form label {
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.product-form input,
+.product-form textarea {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid #dddddd;
+    border-radius: 6px;
+    font-size: 16px;
+}
+
+.product-form button {
+    margin-top: 20px;
+    padding: 15px;
+
+    border: none;
+    border-radius: 6px;
+
+    background: #111111;
+    color: white;
+
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.product-form button:hover {
+    background: #333333;
+}
+
+.product-description {
+    margin-top: 8px;
+    color: #777;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.form-group {
+    margin-bottom: 30px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.form-help {
+    margin-bottom: 12px;
+    font-size: 14px;
+    color: #888;
+}
+
+.or-text {
+    text-align: center;
+    margin: 12px 0;
+    color: #aaa;
+    font-size: 13px;
+}
+
+.price-input {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.price-input input {
+    max-width: 300px;
+}
+
+.options-section {
+    margin-top: 50px;
+    padding-top: 30px;
+    border-top: 1px solid #ddd;
+}
+
+.options-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 25px;
+}
+
+.options-header h2 {
+    margin-bottom: 7px;
+}
+
+.options-header p {
+    color: #888;
+    font-size: 14px;
+}
+
+.add-option-button {
+    padding: 10px 16px;
+    background: white;
+    border: 1px solid #222;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.option-row {
+    display: grid;
+    grid-template-columns: 1fr 150px 2fr auto;
+    gap: 12px;
+    align-items: end;
+
+    padding: 20px;
+
+    margin-bottom: 15px;
+
+    background: #f7f7f7;
+
+    border-radius: 8px;
+}
+
+.option-field label {
+    display: block;
+    font-size: 13px;
+    margin-bottom: 7px;
+}
+
+.option-field input {
+    width: 100%;
+    padding: 12px;
+
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+
+.remove-option-button {
+    height: 43px;
+
+    padding: 0 15px;
+
+    border: 1px solid #ddd;
+    background: white;
+
+    border-radius: 6px;
+
+    cursor: pointer;
+}
+
+.submit-product-button {
+    width: 100%;
+
+    margin-top: 40px;
+
+    padding: 17px;
+
+    border: 0;
+    border-radius: 7px;
+
+    background: #111;
+    color: white;
+
+    font-size: 17px;
+
+    cursor: pointer;
+}
+
+.store-box {
+    margin-top: 20px;
+    padding: 20px;
+
+    border: 1px solid #e2e2e2;
+    border-radius: 8px;
+
+    background: #fafafa;
+}
+
+.store-box h3 {
+    margin-bottom: 20px;
+    font-size: 18px;
+}
+
+.store-box label {
+    display: block;
+    margin-top: 15px;
+    margin-bottom: 8px;
+}
+
+.store-box input[type="url"] {
+    width: 100%;
+}
+
+.store-box + .store-box {
+    margin-top: 20px;
+}
+
+/* =========================
+   상품 옵션
+========================= */
+
+.option-row {
+    display: block;
+
+    margin-bottom: 20px;
+    padding: 20px;
+
+    background: #f7f7f7;
+
+    border: 1px solid #eeeeee;
+    border-radius: 10px;
+}
+
+
+.option-title-row {
+    display: flex;
+    align-items: end;
+    gap: 15px;
+
+    margin-bottom: 20px;
+}
+
+
+.option-name-field {
+    flex: 1;
+}
+
+
+.option-name-field label,
+.option-store-fields label {
+    display: block;
+
+    margin-bottom: 7px;
+
+    font-size: 13px;
+    font-weight: 600;
+}
+
+
+.option-name-field input {
+    width: 100%;
+
+    padding: 12px;
+
+    border: 1px solid #dddddd;
+    border-radius: 6px;
+}
+
+
+.option-store-box {
+    margin-top: 15px;
+    padding: 15px;
+
+    background: white;
+
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+}
+
+
+.option-store-box h4 {
+    margin-bottom: 12px;
+}
+
+
+.option-store-fields {
+    display: grid;
+
+    grid-template-columns: 180px 1fr;
+
+    gap: 15px;
+}
+
+
+.option-store-fields input {
+    width: 100%;
+
+    padding: 12px;
+
+    border: 1px solid #dddddd;
+    border-radius: 6px;
+}
+
+
+.remove-option-button {
+    height: 43px;
+
+    padding: 0 18px;
+
+    border: none;
+    border-radius: 6px;
+
+    background: #111111;
+    color: white;
+
+    cursor: pointer;
+}
+
+
+.remove-option-button:hover {
+    background: #333333;
+}
+
+.category-select {
+    width: 100%;
+
+    padding: 14px;
+
+    border: 1px solid #dddddd;
+    border-radius: 6px;
+
+    background: white;
+
+    font-size: 16px;
+
+    cursor: pointer;
+}
+
+.category-select:focus {
+    outline: none;
+    border-color: #777;
+}
+
+.category-container a:hover {
+    color: #000000;
+    font-weight: 700;
+}
+
+.logo {
+    flex-shrink: 0;
+}
+
+/* =========================
+   카테고리 페이지
+========================= */
+
+.category-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 50px 20px 80px;
+}
+
+.category-page-header {
+    margin-bottom: 40px;
+}
+
+.category-page-header h1 {
+    font-size: 30px;
+    margin-bottom: 10px;
+}
+
+.category-page-header p {
+    color: #777;
+    font-size: 14px;
+}
+
+
+/* 현재 선택된 카테고리 */
+
+nav a.active {
+    font-weight: 700;
+    color: #000;
+    border-bottom: 2px solid #111;
+}
+
+
+/* 상품 없을 때 */
+
+.empty-category {
+    grid-column: 1 / -1;
+
+    padding: 80px 0;
+
+    text-align: center;
+
+    color: #999;
+}

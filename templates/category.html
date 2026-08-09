@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>{{ category_name }} - MONO</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+</head>
+
+<body>
+
+
+<header>
+
+    <div class="header-container">
+
+        <a href="/" class="logo">
+            MONO
+        </a>
+
+        <nav>
+
+            <a href="/">
+                홈
+            </a>
+
+            <a href="/products">
+                전체상품
+            </a>
+
+            <a
+                href="/category/fashion"
+                class="{% if category_slug == 'fashion' %}active{% endif %}"
+            >
+                패션의류/잡화
+            </a>
+
+            <a
+                href="/category/food"
+                class="{% if category_slug == 'food' %}active{% endif %}"
+            >
+                식품
+            </a>
+
+            <a
+                href="/category/kitchen"
+                class="{% if category_slug == 'kitchen' %}active{% endif %}"
+            >
+                주방용품
+            </a>
+
+            <a
+                href="/category/living"
+                class="{% if category_slug == 'living' %}active{% endif %}"
+            >
+                생활용품
+            </a>
+
+            <a
+                href="/category/hobby"
+                class="{% if category_slug == 'hobby' %}active{% endif %}"
+            >
+                취미용품
+            </a>
+
+            <a
+                href="/category/car"
+                class="{% if category_slug == 'car' %}active{% endif %}"
+            >
+                자동차용품
+            </a>
+
+            <a
+                href="/category/office"
+                class="{% if category_slug == 'office' %}active{% endif %}"
+            >
+                사무용품
+            </a>
+
+            <a
+                href="/category/sports"
+                class="{% if category_slug == 'sports' %}active{% endif %}"
+            >
+                스포츠용품
+            </a>
+
+            <a href="#">
+                로그인
+            </a>
+
+            <a href="#">
+                회원가입
+            </a>
+
+        </nav>
+
+    </div>
+
+</header>
+
+
+<main class="category-page">
+
+    <div class="category-page-header">
+
+        <h1>
+            {{ category_name }}
+        </h1>
+
+        <p>
+            {{ category_name }} 상품을 확인해보세요.
+        </p>
+
+    </div>
+
+
+    <section class="products">
+
+        <div class="product-grid">
+
+            {% for product in products %}
+
+            <div class="product-card">
+
+
+                {% if product["image_file"] %}
+
+                <img
+                    class="product-image-real"
+                    src="{{ url_for(
+                        'static',
+                        filename='uploads/products/' + product['image_file']
+                    ) }}"
+                    alt="{{ product['name'] }}"
+                >
+
+                {% elif product["image_url"] %}
+
+                <img
+                    class="product-image-real"
+                    src="{{ product['image_url'] }}"
+                    alt="{{ product['name'] }}"
+                >
+
+                {% else %}
+
+                <div class="product-image">
+                    상품 이미지
+                </div>
+
+                {% endif %}
+
+
+                <p class="product-category">
+                    {{ product["category"] }}
+                </p>
+
+
+                <h3>
+                    {{ product["name"] }}
+                </h3>
+
+
+                <div class="store-prices">
+
+                    {% if product["smartstore_price"] %}
+
+                    <p>
+
+                        <span>
+                            스마트스토어
+                        </span>
+
+                        <strong>
+                            {{ "{:,}".format(product["smartstore_price"]) }}원
+                        </strong>
+
+                    </p>
+
+                    {% endif %}
+
+
+                    {% if product["coupang_price"] %}
+
+                    <p>
+
+                        <span>
+                            쿠팡
+                        </span>
+
+                        <strong>
+                            {{ "{:,}".format(product["coupang_price"]) }}원
+                        </strong>
+
+                    </p>
+
+                    {% endif %}
+
+                </div>
+
+
+                <div class="purchase-buttons">
+
+                    {% if product["smartstore_url"] %}
+
+                    <a
+                        href="{{ product['smartstore_url'] }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        스마트스토어
+                    </a>
+
+                    {% endif %}
+
+
+                    {% if product["coupang_url"] %}
+
+                    <a
+                        href="{{ product['coupang_url'] }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        쿠팡
+                    </a>
+
+                    {% endif %}
+
+                </div>
+
+
+            </div>
+
+            {% else %}
+
+            <div class="empty-category">
+
+                <p>
+                    아직 등록된 상품이 없습니다.
+                </p>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+    </section>
+
+</main>
+
+
+<footer>
+
+    <p>
+        © 2026 MONO. All rights reserved.
+    </p>
+
+</footer>
+
+
+</body>
+
+</html>
