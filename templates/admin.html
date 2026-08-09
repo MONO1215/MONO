@@ -326,15 +326,30 @@
 
     <div class="admin-list-title">
 
-        <h2>
-            등록된 상품
-        </h2>
+    <h2>
+        등록된 상품
+    </h2>
 
-        <span>
+    <div class="admin-list-tools">
+
+        <div class="admin-product-search">
+
+            <input
+                type="text"
+                id="admin-product-search-input"
+                placeholder="상품명 검색"
+                oninput="filterAdminProducts()"
+            >
+
+        </div>
+
+        <span id="admin-product-count">
             총 {{ products|length }}개
         </span>
 
     </div>
+
+</div>
 
 
     {% if products %}
@@ -343,7 +358,10 @@
 
         {% for product in products %}
 
-        <div class="admin-product-item">
+        <div
+    class="admin-product-item"
+    data-product-name="{{ product['name']|lower }}"
+>
 
 
             <!-- 이미지 -->
@@ -591,6 +609,58 @@ function addOption() {
 
 </script>
 
+<script>
+
+function filterAdminProducts() {
+
+    const input =
+        document.getElementById(
+            "admin-product-search-input"
+        );
+
+    const keyword =
+        input.value
+            .trim()
+            .toLowerCase();
+
+    const products =
+        document.querySelectorAll(
+            ".admin-product-item"
+        );
+
+    let visibleCount = 0;
+
+    products.forEach(function(product) {
+
+        const productName =
+            product.dataset.productName || "";
+
+        if (
+            keyword === "" ||
+            productName.includes(keyword)
+        ) {
+
+            product.style.display = "";
+            visibleCount++;
+
+        } else {
+
+            product.style.display = "none";
+
+        }
+
+    });
+
+    const count =
+        document.getElementById(
+            "admin-product-count"
+        );
+
+    count.textContent =
+        "총 " + visibleCount + "개";
+}
+
+</script>
 
 </body>
 

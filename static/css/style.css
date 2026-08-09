@@ -917,3 +917,30 @@ nav a.active {
 
     text-align: center;
 }
+
+.admin-list-tools {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.admin-product-search input {
+    width: 220px;
+    padding: 10px 12px;
+
+    border: 1px solid #dddddd;
+    border-radius: 6px;
+
+    font-size: 14px;
+}
+
+.admin-product-search input:focus {
+    outline: none;
+    border-color: #777777;
+}
+
+#admin-product-count {
+    color: #888;
+    font-size: 14px;
+    white-space: nowrap;
+}
