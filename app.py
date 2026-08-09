@@ -3,7 +3,10 @@ import os
 import psycopg
 from psycopg.rows import dict_row
 from werkzeug.utils import secure_filename
-from werkzeug.security import check_password_hash
+from werkzeug.security import (
+    check_password_hash,
+    generate_password_hash
+)
 from functools import wraps
 
 
@@ -310,6 +313,270 @@ def product_detail(product_id):
         "product_detail.html",
         product=product,
         options=options
+    )
+
+
+# ==================================================
+# 일반 회원가입
+# ==================================================
+
+@app.route(
+    "/register",
+    methods=["GET", "POST"]
+)
+def register():
+
+    error = None
+
+    if request.method == "POST":
+
+        name = request.form.get(
+            "name",
+            ""
+        ).strip()
+
+        username = request.form.get(
+            "username",
+            ""
+        ).strip()
+
+        phone = request.form.get(
+            "phone",
+            ""
+        ).strip()
+
+        email = request.form.get(
+            "email",
+            ""
+        ).strip()
+
+        password = request.form.get(
+            "password",
+            ""
+        )
+
+        password_confirm = request.form.get(
+            "password_confirm",
+            ""
+        )
+
+        # ------------------------------------------
+        # 필수 입력 확인
+        # ------------------------------------------
+
+        if not name:
+            error = "이름을 입력해주세요."
+
+        elif not username:
+            error = "아이디를 입력해주세요."
+
+        elif not email:
+            error = "이메일을 입력해주세요."
+
+        elif not password:
+            error = "비밀번호를 입력해주세요."
+
+        elif password != password_confirm:
+            error = "비밀번호가 일치하지 않습니다."
+
+
+        # ------------------------------------------
+        # DB 저장
+        # ------------------------------------------
+
+        if error is None:
+
+            conn = get_db_connection()
+
+            try:
+
+                with conn.cursor() as cur:
+
+                    # 아이디 중복 확인
+                    cur.execute("""
+                        SELECT id
+                        FROM users
+                        WHERE username = %s
+                    """, (
+                        username,
+                    ))
+
+                    existing_username = cur.fetchone()
+
+                    if existing_username:
+
+                        error = (
+                            "이미 사용 중인 아이디입니다."
+                        )
+
+                    else:
+
+                        # 이메일 중복 확인
+                        cur.execute("""
+                            SELECT id
+                            FROM users
+                            WHERE email = %s
+                        """, (
+                            email,
+                        ))
+
+                        existing_email = cur.fetchone()
+
+                        if existing_email:
+
+                            error = (
+                                "이미 가입된 이메일입니다."
+                            )
+
+                        else:
+
+                            password_hash = (
+                                generate_password_hash(
+                                    password
+                                )
+                            )
+
+                            cur.execute("""
+                                INSERT INTO users (
+                                    name,
+                                    username,
+                                    phone,
+                                    email,
+                                    password_hash
+                                )
+                                VALUES (
+                                    %s, %s, %s, %s, %s
+                                )
+                            """, (
+                                name,
+                                username,
+                                phone,
+                                email,
+                                password_hash
+                            ))
+
+                            conn.commit()
+
+            except Exception:
+
+                conn.rollback()
+                raise
+
+            finally:
+
+                conn.close()
+
+
+            if error is None:
+
+                return redirect(
+                    url_for("login")
+                )
+
+
+    return render_template(
+        "register.html",
+        error=error
+    )
+
+
+# ==================================================
+# 일반 사용자 로그인
+# ==================================================
+
+@app.route(
+    "/login",
+    methods=["GET", "POST"]
+)
+def login():
+
+    error = None
+
+    if request.method == "POST":
+
+        username = request.form.get(
+            "username",
+            ""
+        ).strip()
+
+        password = request.form.get(
+            "password",
+            ""
+        )
+
+        conn = get_db_connection()
+
+        try:
+
+            with conn.cursor() as cur:
+
+                cur.execute("""
+                    SELECT *
+                    FROM users
+                    WHERE username = %s
+                """, (
+                    username,
+                ))
+
+                user = cur.fetchone()
+
+        finally:
+
+            conn.close()
+
+
+        if (
+            user
+            and check_password_hash(
+                user["password_hash"],
+                password
+            )
+        ):
+
+            session["user_logged_in"] = True
+            session["user_id"] = user["id"]
+            session["username"] = user["username"]
+
+            return redirect(
+                url_for("home")
+            )
+
+
+        error = (
+            "아이디 또는 비밀번호가 올바르지 않습니다."
+        )
+
+
+    return render_template(
+        "login.html",
+        error=error
+    )
+
+
+# ==================================================
+# 일반 사용자 로그아웃
+# ==================================================
+
+@app.route("/logout")
+def logout():
+
+    session.pop(
+        "user_logged_in",
+        None
+    )
+
+    session.pop(
+        "user_id",
+        None
+    )
+
+    session.pop(
+        "username",
+        None
+    )
+
+    return redirect(
+        url_for("home")
     )
 
 
