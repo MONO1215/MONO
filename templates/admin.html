@@ -38,8 +38,19 @@
 
         <nav>
 
+            <span class="admin-user-name">
+                {{ session.get("admin_username") }} 관리자
+            </span>
+
             <a href="/">
                 쇼핑몰 보기
+            </a>
+
+            <a
+                href="{{ url_for('admin_logout') }}"
+                class="admin-logout-button"
+            >
+                로그아웃
             </a>
 
         </nav>
@@ -47,7 +58,6 @@
     </div>
 
 </header>
-
 
 
 <main class="admin-page">
