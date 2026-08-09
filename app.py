@@ -5,7 +5,10 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-DATABASE = "mono.db"
+if os.environ.get("VERCEL"):
+    DATABASE = "/tmp/mono.db"
+else:
+    DATABASE = "mono.db"
 
 UPLOAD_FOLDER = os.path.join("static", "uploads", "products")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
