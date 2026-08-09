@@ -175,11 +175,14 @@ def category_page(category_slug):
 # =========================
 # 상품 상세 페이지
 # =========================
+
 @app.route("/product/<int:product_id>")
 def product_detail(product_id):
     conn = get_db_connection()
 
     with conn.cursor() as cur:
+
+        # 상품 정보
         cur.execute("""
             SELECT *
             FROM products
@@ -188,10 +191,12 @@ def product_detail(product_id):
 
         product = cur.fetchone()
 
-        if not product:
+        if product is None:
             conn.close()
-            return redirect(url_for("home"))
+            return "상품을 찾을 수 없습니다.", 404
 
+
+        # 상품 옵션
         cur.execute("""
             SELECT *
             FROM product_options
