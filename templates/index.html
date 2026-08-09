@@ -120,11 +120,13 @@
 
 <div class="product-card">
 
-    <!-- 상세페이지로 이동하는 영역 -->
+    <!-- 상품 상세페이지 링크 -->
     <a
-        href="/product/{{ product['id'] }}"
+        href="{{ url_for('product_detail', product_id=product['id']) }}"
         class="product-main-link"
     >
+
+        <!-- 상품 이미지 -->
 
         {% if product["image_file"] %}
 
@@ -154,9 +156,14 @@
         {% endif %}
 
 
+        <!-- 카테고리 -->
+
         <p class="product-category">
             {{ product["category"] }}
         </p>
+
+
+        <!-- 상품명 -->
 
         <h3>
             {{ product["name"] }}
@@ -166,6 +173,7 @@
 
 
     <!-- 가격 -->
+
     <div class="store-prices">
 
         {% if product["smartstore_price"] %}
@@ -197,6 +205,7 @@
 
 
     <!-- 구매 버튼 -->
+
     <div class="purchase-buttons">
 
         {% if product["smartstore_url"] %}
