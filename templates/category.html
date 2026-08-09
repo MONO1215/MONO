@@ -2,6 +2,7 @@
 <html lang="ko">
 
 <head>
+
     <meta charset="UTF-8">
 
     <meta
@@ -9,13 +10,15 @@
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>{{ category_name }} - MONO</title>
+    <title>{{ category_name }} | MONO</title>
 
     <link
         rel="stylesheet"
         href="{{ url_for('static', filename='css/style.css') }}"
     >
+
 </head>
+
 
 <body>
 
@@ -24,9 +27,13 @@
 
     <div class="header-container">
 
-        <a href="/" class="logo">
+        <a
+            href="/"
+            class="logo"
+        >
             MONO
         </a>
+
 
         <nav>
 
@@ -40,84 +47,103 @@
 
             <a
                 href="/category/fashion"
-                class="{% if category_slug == 'fashion' %}active{% endif %}"
+                {% if category_slug == "fashion" %}
+                class="active"
+                {% endif %}
             >
                 패션의류/잡화
             </a>
 
             <a
                 href="/category/food"
-                class="{% if category_slug == 'food' %}active{% endif %}"
+                {% if category_slug == "food" %}
+                class="active"
+                {% endif %}
             >
                 식품
             </a>
 
             <a
                 href="/category/kitchen"
-                class="{% if category_slug == 'kitchen' %}active{% endif %}"
+                {% if category_slug == "kitchen" %}
+                class="active"
+                {% endif %}
             >
                 주방용품
             </a>
 
             <a
                 href="/category/living"
-                class="{% if category_slug == 'living' %}active{% endif %}"
+                {% if category_slug == "living" %}
+                class="active"
+                {% endif %}
             >
                 생활용품
             </a>
 
             <a
                 href="/category/hobby"
-                class="{% if category_slug == 'hobby' %}active{% endif %}"
+                {% if category_slug == "hobby" %}
+                class="active"
+                {% endif %}
             >
                 취미용품
             </a>
 
             <a
                 href="/category/car"
-                class="{% if category_slug == 'car' %}active{% endif %}"
+                {% if category_slug == "car" %}
+                class="active"
+                {% endif %}
             >
                 자동차용품
             </a>
 
             <a
                 href="/category/office"
-                class="{% if category_slug == 'office' %}active{% endif %}"
+                {% if category_slug == "office" %}
+                class="active"
+                {% endif %}
             >
                 사무용품
             </a>
 
             <a
                 href="/category/sports"
-                class="{% if category_slug == 'sports' %}active{% endif %}"
+                {% if category_slug == "sports" %}
+                class="active"
+                {% endif %}
             >
                 스포츠용품
             </a>
 
+
+            <!-- 로그인 상태 -->
+
             {% if session.get("user_logged_in") %}
 
-    <a
-    href="{{ url_for('profile') }}"
-    class="user-header-name"
->
-    {{ session.get("username") }}님
-</a>
+                <a
+                    href="{{ url_for('profile') }}"
+                    class="user-header-name"
+                >
+                    {{ session.get("username") }}님
+                </a>
 
-    <a href="{{ url_for('logout') }}">
-        로그아웃
-    </a>
+                <a href="{{ url_for('logout') }}">
+                    로그아웃
+                </a>
 
-{% else %}
+            {% else %}
 
-    <a href="{{ url_for('login') }}">
-        로그인
-    </a>
+                <a href="{{ url_for('login') }}">
+                    로그인
+                </a>
 
-    <a href="{{ url_for('register') }}">
-        회원가입
-    </a>
+                <a href="{{ url_for('register') }}">
+                    회원가입
+                </a>
 
-{% endif %}
+            {% endif %}
 
         </nav>
 
@@ -126,7 +152,11 @@
 </header>
 
 
+
 <main class="category-page">
+
+
+    <!-- 카테고리 제목 -->
 
     <div class="category-page-header">
 
@@ -135,63 +165,91 @@
         </h1>
 
         <p>
-            {{ category_name }} 상품을 확인해보세요.
+            MONO의 {{ category_name }} 상품입니다.
         </p>
 
     </div>
 
 
+
+    <!-- 상품 목록 -->
+
     <section class="products">
 
         <div class="product-grid">
 
+
             {% for product in products %}
 
-            <a
-    href="{{ url_for('product_detail', product_id=product['id']) }}"
-    class="product-card product-card-link"
->
+
+            <div class="product-card">
 
 
-                {% if product["image_file"] %}
+                <!-- 상품 상세 이동 -->
 
-                <img
-                    class="product-image-real"
-                    src="{{ url_for(
-                        'static',
-                        filename='uploads/products/' + product['image_file']
+                <a
+                    href="{{ url_for(
+                        'product_detail',
+                        product_id=product['id']
                     ) }}"
-                    alt="{{ product['name'] }}"
+                    class="product-main-link"
                 >
 
-                {% elif product["image_url"] %}
 
-                <img
-                    class="product-image-real"
-                    src="{{ product['image_url'] }}"
-                    alt="{{ product['name'] }}"
-                >
+                    <!-- 상품 이미지 -->
 
-                {% else %}
+                    {% if product["image_file"] %}
 
-                <div class="product-image">
-                    상품 이미지
-                </div>
-
-                {% endif %}
+                    <img
+                        class="product-image-real"
+                        src="{{ url_for(
+                            'static',
+                            filename='uploads/products/' + product['image_file']
+                        ) }}"
+                        alt="{{ product['name'] }}"
+                    >
 
 
-                <p class="product-category">
-                    {{ product["category"] }}
-                </p>
+                    {% elif product["image_url"] %}
+
+                    <img
+                        class="product-image-real"
+                        src="{{ product['image_url'] }}"
+                        alt="{{ product['name'] }}"
+                    >
 
 
-                <h3>
-                    {{ product["name"] }}
-                </h3>
+                    {% else %}
 
+                    <div class="product-image">
+                        상품 이미지
+                    </div>
+
+                    {% endif %}
+
+
+                    <!-- 카테고리 -->
+
+                    <p class="product-category">
+                        {{ product["category"] }}
+                    </p>
+
+
+                    <!-- 상품명 -->
+
+                    <h3>
+                        {{ product["name"] }}
+                    </h3>
+
+
+                </a>
+
+
+
+                <!-- 가격 -->
 
                 <div class="store-prices">
+
 
                     {% if product["smartstore_price"] %}
 
@@ -202,12 +260,15 @@
                         </span>
 
                         <strong>
-                            {{ "{:,}".format(product["smartstore_price"]) }}원
+                            {{ "{:,}".format(
+                                product["smartstore_price"]
+                            ) }}원
                         </strong>
 
                     </p>
 
                     {% endif %}
+
 
 
                     {% if product["coupang_price"] %}
@@ -219,17 +280,24 @@
                         </span>
 
                         <strong>
-                            {{ "{:,}".format(product["coupang_price"]) }}원
+                            {{ "{:,}".format(
+                                product["coupang_price"]
+                            ) }}원
                         </strong>
 
                     </p>
 
                     {% endif %}
 
-                </a>
 
+                </div>
+
+
+
+                <!-- 구매 버튼 -->
 
                 <div class="purchase-buttons">
+
 
                     {% if product["smartstore_url"] %}
 
@@ -256,28 +324,33 @@
 
                     {% endif %}
 
+
                 </div>
 
 
             </div>
 
+
             {% else %}
+
 
             <div class="empty-category">
 
-                <p>
-                    아직 등록된 상품이 없습니다.
-                </p>
+                등록된 {{ category_name }} 상품이 없습니다.
 
             </div>
 
+
             {% endfor %}
+
 
         </div>
 
     </section>
 
+
 </main>
+
 
 
 <footer>
