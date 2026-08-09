@@ -578,8 +578,372 @@ def admin():
         )
 
 
-    return render_template(
-        "admin.html"
+    conn = get_db_connection()
+
+try:
+
+    with conn.cursor() as cur:
+
+        cur.execute("""
+            SELECT *
+            FROM products
+            ORDER BY id DESC
+        """)
+
+        products = cur.fetchall()
+
+finally:
+
+    conn.close()
+
+
+return render_template(
+    "admin.html",
+    products=products
+)
+
+# ==================================================
+# 상품 수정
+# ==================================================
+
+@app.route(
+    "/admin/product/<int:product_id>/edit",
+    methods=["GET", "POST"]
+)
+def edit_product(product_id):
+
+    conn = get_db_connection()
+
+    try:
+
+        # ------------------------------------------
+        # 현재 상품 불러오기
+        # ------------------------------------------
+
+        with conn.cursor() as cur:
+
+            cur.execute("""
+                SELECT *
+                FROM products
+                WHERE id = %s
+            """, (product_id,))
+
+            product = cur.fetchone()
+
+            if product is None:
+                return "상품을 찾을 수 없습니다.", 404
+
+
+            cur.execute("""
+                SELECT *
+                FROM product_options
+                WHERE product_id = %s
+                ORDER BY id ASC
+            """, (product_id,))
+
+            options = cur.fetchall()
+
+
+        # ------------------------------------------
+        # 수정 저장
+        # ------------------------------------------
+
+        if request.method == "POST":
+
+            name = request.form.get(
+                "name",
+                ""
+            ).strip()
+
+            category = request.form.get(
+                "category",
+                ""
+            ).strip()
+
+            image_url = request.form.get(
+                "image_url",
+                ""
+            ).strip()
+
+            description_html = request.form.get(
+                "description_html",
+                ""
+            )
+
+            smartstore_price = request.form.get(
+                "smartstore_price",
+                ""
+            )
+
+            smartstore_url = request.form.get(
+                "smartstore_url",
+                ""
+            ).strip()
+
+            coupang_price = request.form.get(
+                "coupang_price",
+                ""
+            )
+
+            coupang_url = request.form.get(
+                "coupang_url",
+                ""
+            ).strip()
+
+
+            # --------------------------------------
+            # HTML 파일
+            # --------------------------------------
+
+            description_file = request.files.get(
+                "description_file"
+            )
+
+            if (
+                description_file
+                and description_file.filename
+            ):
+
+                description_html = (
+                    description_file
+                    .read()
+                    .decode("utf-8")
+                )
+
+
+            # --------------------------------------
+            # 이미지 파일
+            # --------------------------------------
+
+            image_file_name = product["image_file"]
+
+            image_file = request.files.get(
+                "image_file"
+            )
+
+            if (
+                image_file
+                and image_file.filename
+            ):
+
+                if IS_VERCEL:
+
+                    return (
+                        "Vercel에서는 이미지 파일을 "
+                        "영구 저장할 수 없습니다. "
+                        "이미지 URL을 사용해주세요.",
+                        400
+                    )
+
+                filename = secure_filename(
+                    image_file.filename
+                )
+
+                image_file.save(
+                    os.path.join(
+                        app.config["UPLOAD_FOLDER"],
+                        filename
+                    )
+                )
+
+                image_file_name = filename
+
+
+            # --------------------------------------
+            # 상품 수정
+            # --------------------------------------
+
+            with conn.cursor() as cur:
+
+                cur.execute("""
+                    UPDATE products
+                    SET
+                        name = %s,
+                        category = %s,
+                        image_url = %s,
+                        image_file = %s,
+                        description_html = %s,
+                        smartstore_price = %s,
+                        smartstore_url = %s,
+                        coupang_price = %s,
+                        coupang_url = %s
+                    WHERE id = %s
+                """, (
+
+                    name,
+                    category,
+                    image_url,
+                    image_file_name,
+                    description_html,
+
+                    int(smartstore_price)
+                    if smartstore_price
+                    else None,
+
+                    smartstore_url,
+
+                    int(coupang_price)
+                    if coupang_price
+                    else None,
+
+                    coupang_url,
+
+                    product_id
+                ))
+
+
+                # 기존 옵션 전체 삭제
+                cur.execute("""
+                    DELETE FROM product_options
+                    WHERE product_id = %s
+                """, (product_id,))
+
+
+            # --------------------------------------
+            # 수정된 옵션 다시 저장
+            # --------------------------------------
+
+            option_names = request.form.getlist(
+                "option_name[]"
+            )
+
+            option_smartstore_prices = (
+                request.form.getlist(
+                    "option_smartstore_price[]"
+                )
+            )
+
+            option_smartstore_urls = (
+                request.form.getlist(
+                    "option_smartstore_url[]"
+                )
+            )
+
+            option_coupang_prices = (
+                request.form.getlist(
+                    "option_coupang_price[]"
+                )
+            )
+
+            option_coupang_urls = (
+                request.form.getlist(
+                    "option_coupang_url[]"
+                )
+            )
+
+
+            for (
+                option_name,
+                smart_price,
+                smart_url,
+                cp_price,
+                cp_url
+            ) in zip(
+                option_names,
+                option_smartstore_prices,
+                option_smartstore_urls,
+                option_coupang_prices,
+                option_coupang_urls
+            ):
+
+                option_name = option_name.strip()
+
+                if not option_name:
+                    continue
+
+                with conn.cursor() as cur:
+
+                    cur.execute("""
+                        INSERT INTO product_options (
+                            product_id,
+                            option_name,
+                            smartstore_price,
+                            smartstore_url,
+                            coupang_price,
+                            coupang_url
+                        )
+                        VALUES (
+                            %s, %s, %s,
+                            %s, %s, %s
+                        )
+                    """, (
+
+                        product_id,
+                        option_name,
+
+                        int(smart_price)
+                        if smart_price
+                        else None,
+
+                        smart_url.strip(),
+
+                        int(cp_price)
+                        if cp_price
+                        else None,
+
+                        cp_url.strip()
+                    ))
+
+
+            conn.commit()
+
+            return redirect(
+                url_for("admin")
+            )
+
+
+        return render_template(
+            "edit_product.html",
+            product=product,
+            options=options
+        )
+
+
+    except Exception:
+
+        conn.rollback()
+        raise
+
+
+    finally:
+
+        conn.close()
+
+
+# ==================================================
+# 상품 삭제
+# ==================================================
+
+@app.route(
+    "/admin/product/<int:product_id>/delete",
+    methods=["POST"]
+)
+def delete_product(product_id):
+
+    conn = get_db_connection()
+
+    try:
+
+        with conn.cursor() as cur:
+
+            cur.execute("""
+                DELETE FROM products
+                WHERE id = %s
+            """, (product_id,))
+
+        conn.commit()
+
+    except Exception:
+
+        conn.rollback()
+        raise
+
+    finally:
+
+        conn.close()
+
+    return redirect(
+        url_for("admin")
     )
 
 

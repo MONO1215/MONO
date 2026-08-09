@@ -322,6 +322,147 @@
 
     </form>
 
+<section class="admin-product-list">
+
+    <div class="admin-list-title">
+
+        <h2>
+            등록된 상품
+        </h2>
+
+        <span>
+            총 {{ products|length }}개
+        </span>
+
+    </div>
+
+
+    {% if products %}
+
+    <div class="admin-products">
+
+        {% for product in products %}
+
+        <div class="admin-product-item">
+
+
+            <!-- 이미지 -->
+
+            <div class="admin-product-image">
+
+                {% if product["image_url"] %}
+
+                <img
+                    src="{{ product['image_url'] }}"
+                    alt="{{ product['name'] }}"
+                >
+
+                {% else %}
+
+                <span>
+                    이미지 없음
+                </span>
+
+                {% endif %}
+
+            </div>
+
+
+            <!-- 상품 정보 -->
+
+            <div class="admin-product-info">
+
+                <span class="admin-product-category">
+                    {{ product["category"] }}
+                </span>
+
+                <strong>
+                    {{ product["name"] }}
+                </strong>
+
+
+                <div class="admin-product-price">
+
+                    {% if product["smartstore_price"] %}
+
+                    <span>
+                        스마트스토어
+                        {{ "{:,}".format(product["smartstore_price"]) }}원
+                    </span>
+
+                    {% endif %}
+
+
+                    {% if product["coupang_price"] %}
+
+                    <span>
+                        쿠팡
+                        {{ "{:,}".format(product["coupang_price"]) }}원
+                    </span>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+
+            <!-- 관리 버튼 -->
+
+            <div class="admin-product-actions">
+
+                <a
+                    href="{{ url_for(
+                        'edit_product',
+                        product_id=product['id']
+                    ) }}"
+                    class="admin-edit-button"
+                >
+                    수정
+                </a>
+
+
+                <form
+                    method="POST"
+                    action="{{ url_for(
+                        'delete_product',
+                        product_id=product['id']
+                    ) }}"
+                    onsubmit="
+                        return confirm(
+                            '정말 이 상품을 삭제하시겠습니까?'
+                        );
+                    "
+                >
+
+                    <button
+                        type="submit"
+                        class="admin-delete-button"
+                    >
+                        삭제
+                    </button>
+
+                </form>
+
+            </div>
+
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+    {% else %}
+
+    <div class="admin-empty-products">
+        등록된 상품이 없습니다.
+    </div>
+
+    {% endif %}
+
+</section>
+
 </section>
 
 </main>

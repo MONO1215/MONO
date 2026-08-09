@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>상품 수정 - MONO</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+</head>
+
+<body>
+
+
+<header>
+
+    <div class="header-container">
+
+        <a href="/" class="logo">
+            MONO
+        </a>
+
+        <nav>
+            <a href="/">쇼핑몰 보기</a>
+            <a href="/admin">관리자</a>
+        </nav>
+
+    </div>
+
+</header>
+
+
+<main>
+
+<section class="admin-section">
+
+    <h1>
+        상품 수정
+    </h1>
+
+
+    <form
+        method="POST"
+        enctype="multipart/form-data"
+        class="product-form"
+    >
+
+
+        <!-- 상품명 -->
+
+        <div class="form-group">
+
+            <label>
+                상품명
+            </label>
+
+            <input
+                type="text"
+                name="name"
+                value="{{ product['name'] }}"
+                required
+            >
+
+        </div>
+
+
+        <!-- 카테고리 -->
+
+        <div class="form-group">
+
+            <label>
+                상품 카테고리
+            </label>
+
+            <select
+                name="category"
+                required
+                class="category-select"
+            >
+
+                <option
+                    value="패션의류/잡화"
+                    {% if product["category"] == "패션의류/잡화" %}selected{% endif %}
+                >
+                    패션의류/잡화
+                </option>
+
+                <option
+                    value="식품"
+                    {% if product["category"] == "식품" %}selected{% endif %}
+                >
+                    식품
+                </option>
+
+                <option
+                    value="주방용품"
+                    {% if product["category"] == "주방용품" %}selected{% endif %}
+                >
+                    주방용품
+                </option>
+
+                <option
+                    value="생활용품"
+                    {% if product["category"] == "생활용품" %}selected{% endif %}
+                >
+                    생활용품
+                </option>
+
+                <option
+                    value="취미용품"
+                    {% if product["category"] == "취미용품" %}selected{% endif %}
+                >
+                    취미용품
+                </option>
+
+                <option
+                    value="자동차용품"
+                    {% if product["category"] == "자동차용품" %}selected{% endif %}
+                >
+                    자동차용품
+                </option>
+
+                <option
+                    value="사무용품"
+                    {% if product["category"] == "사무용품" %}selected{% endif %}
+                >
+                    사무용품
+                </option>
+
+                <option
+                    value="스포츠용품"
+                    {% if product["category"] == "스포츠용품" %}selected{% endif %}
+                >
+                    스포츠용품
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <!-- 이미지 -->
+
+        <div class="form-group">
+
+            <label>
+                상품 이미지
+            </label>
+
+            <p class="form-help">
+                이미지 URL을 수정하거나 새 파일을 업로드하세요.
+            </p>
+
+            <input
+                type="url"
+                name="image_url"
+                value="{{ product['image_url'] or '' }}"
+                placeholder="https://..."
+            >
+
+            <div class="or-text">
+                또는
+            </div>
+
+            <input
+                type="file"
+                name="image_file"
+                accept="image/*"
+            >
+
+        </div>
+
+
+        <!-- 상품 설명 -->
+
+        <div class="form-group">
+
+            <label>
+                상품 설명 HTML
+            </label>
+
+            <textarea
+                name="description_html"
+                rows="12"
+            >{{ product["description_html"] or "" }}</textarea>
+
+            <div class="or-text">
+                또는
+            </div>
+
+            <input
+                type="file"
+                name="description_file"
+                accept=".html,.htm"
+            >
+
+        </div>
+
+
+        <!-- 기본 구매 정보 -->
+
+        <div class="form-group">
+
+            <h2>
+                기본 구매 정보
+            </h2>
+
+
+            <!-- 스마트스토어 -->
+
+            <div class="store-box">
+
+                <h3>
+                    스마트스토어
+                </h3>
+
+                <label>
+                    판매 가격
+                </label>
+
+                <div class="price-input">
+
+                    <input
+                        type="number"
+                        name="smartstore_price"
+                        min="0"
+                        value="{{ product['smartstore_price'] or '' }}"
+                    >
+
+                    <span>
+                        원
+                    </span>
+
+                </div>
+
+                <label>
+                    구매 사이트 URL
+                </label>
+
+                <input
+                    type="url"
+                    name="smartstore_url"
+                    value="{{ product['smartstore_url'] or '' }}"
+                    placeholder="https://smartstore.naver.com/..."
+                >
+
+            </div>
+
+
+            <!-- 쿠팡 -->
+
+            <div class="store-box">
+
+                <h3>
+                    쿠팡
+                </h3>
+
+                <label>
+                    판매 가격
+                </label>
+
+                <div class="price-input">
+
+                    <input
+                        type="number"
+                        name="coupang_price"
+                        min="0"
+                        value="{{ product['coupang_price'] or '' }}"
+                    >
+
+                    <span>
+                        원
+                    </span>
+
+                </div>
+
+                <label>
+                    구매 사이트 URL
+                </label>
+
+                <input
+                    type="url"
+                    name="coupang_url"
+                    value="{{ product['coupang_url'] or '' }}"
+                    placeholder="https://www.coupang.com/..."
+                >
+
+            </div>
+
+        </div>
+
+
+        <!-- 옵션 -->
+
+        <div class="options-section">
+
+            <div class="options-header">
+
+                <div>
+
+                    <h2>
+                        상품 옵션
+                    </h2>
+
+                    <p>
+                        기존 옵션을 수정하거나 새 옵션을 추가할 수 있습니다.
+                    </p>
+
+                </div>
+
+                <button
+                    type="button"
+                    class="add-option-button"
+                    onclick="addOption()"
+                >
+                    + 옵션 추가
+                </button>
+
+            </div>
+
+
+            <div id="options-container">
+
+                {% for option in options %}
+
+                <div class="option-row">
+
+                    <div class="option-title-row">
+
+                        <div class="option-name-field">
+
+                            <label>
+                                옵션명
+                            </label>
+
+                            <input
+                                type="text"
+                                name="option_name[]"
+                                value="{{ option['option_name'] }}"
+                            >
+
+                        </div>
+
+
+                        <button
+                            type="button"
+                            class="remove-option-button"
+                            onclick="this.closest('.option-row').remove()"
+                        >
+                            삭제
+                        </button>
+
+                    </div>
+
+
+                    <!-- 스마트스토어 옵션 -->
+
+                    <div class="option-store-box">
+
+                        <h4>
+                            스마트스토어
+                        </h4>
+
+                        <div class="option-store-fields">
+
+                            <div>
+
+                                <label>
+                                    판매 가격
+                                </label>
+
+                                <input
+                                    type="number"
+                                    name="option_smartstore_price[]"
+                                    min="0"
+                                    value="{{ option['smartstore_price'] or '' }}"
+                                >
+
+                            </div>
+
+
+                            <div>
+
+                                <label>
+                                    구매 URL
+                                </label>
+
+                                <input
+                                    type="url"
+                                    name="option_smartstore_url[]"
+                                    value="{{ option['smartstore_url'] or '' }}"
+                                >
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- 쿠팡 옵션 -->
+
+                    <div class="option-store-box">
+
+                        <h4>
+                            쿠팡
+                        </h4>
+
+                        <div class="option-store-fields">
+
+                            <div>
+
+                                <label>
+                                    판매 가격
+                                </label>
+
+                                <input
+                                    type="number"
+                                    name="option_coupang_price[]"
+                                    min="0"
+                                    value="{{ option['coupang_price'] or '' }}"
+                                >
+
+                            </div>
+
+
+                            <div>
+
+                                <label>
+                                    구매 URL
+                                </label>
+
+                                <input
+                                    type="url"
+                                    name="option_coupang_url[]"
+                                    value="{{ option['coupang_url'] or '' }}"
+                                >
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+
+        <button
+            type="submit"
+            class="submit-product-button"
+        >
+            수정 저장
+        </button>
+
+
+        <a
+            href="/admin"
+            class="admin-cancel-button"
+        >
+            취소
+        </a>
+
+    </form>
+
+</section>
+
+</main>
+
+
+<script>
+
+function addOption() {
+
+    const container =
+        document.getElementById("options-container");
+
+    const option =
+        document.createElement("div");
+
+    option.className = "option-row";
+
+    option.innerHTML = `
+
+        <div class="option-title-row">
+
+            <div class="option-name-field">
+
+                <label>
+                    옵션명
+                </label>
+
+                <input
+                    type="text"
+                    name="option_name[]"
+                    placeholder="예: 24개입"
+                >
+
+            </div>
+
+
+            <button
+                type="button"
+                class="remove-option-button"
+                onclick="this.closest('.option-row').remove()"
+            >
+                삭제
+            </button>
+
+        </div>
+
+
+        <div class="option-store-box">
+
+            <h4>
+                스마트스토어
+            </h4>
+
+            <div class="option-store-fields">
+
+                <div>
+
+                    <label>
+                        판매 가격
+                    </label>
+
+                    <input
+                        type="number"
+                        name="option_smartstore_price[]"
+                        min="0"
+                        placeholder="가격"
+                    >
+
+                </div>
+
+
+                <div>
+
+                    <label>
+                        구매 URL
+                    </label>
+
+                    <input
+                        type="url"
+                        name="option_smartstore_url[]"
+                        placeholder="스마트스토어 구매 URL"
+                    >
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="option-store-box">
+
+            <h4>
+                쿠팡
+            </h4>
+
+            <div class="option-store-fields">
+
+                <div>
+
+                    <label>
+                        판매 가격
+                    </label>
+
+                    <input
+                        type="number"
+                        name="option_coupang_price[]"
+                        min="0"
+                        placeholder="가격"
+                    >
+
+                </div>
+
+
+                <div>
+
+                    <label>
+                        구매 URL
+                    </label>
+
+                    <input
+                        type="url"
+                        name="option_coupang_url[]"
+                        placeholder="쿠팡 구매 URL"
+                    >
+
+                </div>
+
+            </div>
+
+        </div>
+
+    `;
+
+    container.appendChild(option);
+}
+
+</script>
+
+
+</body>
+
+</html>
