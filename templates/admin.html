@@ -21,6 +21,7 @@
 
 </head>
 
+
 <body>
 
 
@@ -36,9 +37,11 @@
         </a>
 
         <nav>
+
             <a href="/">
                 쇼핑몰 보기
             </a>
+
         </nav>
 
     </div>
@@ -46,467 +49,548 @@
 </header>
 
 
-<main>
 
-<section class="admin-section">
+<main class="admin-page">
 
-    <h1>
-        상품 등록
-    </h1>
+    <div class="admin-layout">
 
 
-    <form
-        method="POST"
-        enctype="multipart/form-data"
-        class="product-form"
-    >
+        <!-- ==================================================
+             왼쪽 : 상품 등록
+        =================================================== -->
 
+        <section class="admin-left">
 
-        <!-- 상품명 -->
+            <div class="admin-section">
 
-        <div class="form-group">
-
-            <label>
-                상품명
-            </label>
-
-            <input
-                type="text"
-                name="name"
-                required
-            >
-
-        </div>
-
-<div class="form-group">
-
-    <label>
-        상품 카테고리
-    </label>
-
-    <select
-        name="category"
-        required
-        class="category-select"
-    >
-
-        <option value="">
-            카테고리를 선택하세요
-        </option>
-
-        <option value="패션의류/잡화">
-            패션의류/잡화
-        </option>
-
-        <option value="식품">
-            식품
-        </option>
-
-        <option value="주방용품">
-            주방용품
-        </option>
-
-        <option value="생활용품">
-            생활용품
-        </option>
-
-        <option value="취미용품">
-            취미용품
-        </option>
-
-        <option value="자동차용품">
-            자동차용품
-        </option>
-
-        <option value="사무용품">
-            사무용품
-        </option>
-
-        <option value="스포츠용품">
-            스포츠용품
-        </option>
-
-    </select>
-
-</div>
-
-
-
-        <!-- 이미지 -->
-
-        <div class="form-group">
-
-            <label>
-                상품 이미지
-            </label>
-
-            <p class="form-help">
-                이미지 URL을 입력하거나
-                직접 파일을 업로드하세요.
-            </p>
-
-            <input
-                type="url"
-                name="image_url"
-                placeholder="https://example.com/image.jpg"
-            >
-
-            <div class="or-text">
-                또는
-            </div>
-
-            <input
-                type="file"
-                name="image_file"
-                accept="image/*"
-            >
-
-        </div>
-
-
-
-        <!-- 상품 설명 -->
-
-        <div class="form-group">
-
-            <label>
-                상품 설명 HTML
-            </label>
-
-            <p class="form-help">
-                HTML을 직접 입력하거나
-                HTML 파일을 업로드하세요.
-            </p>
-
-            <textarea
-                name="description_html"
-                rows="12"
-                placeholder="<h2>상품 설명</h2>
-
-<p>상품 내용을 입력하세요.</p>"
-            ></textarea>
-
-            <div class="or-text">
-                또는
-            </div>
-
-            <input
-                type="file"
-                name="description_file"
-                accept=".html,.htm"
-            >
-
-        </div>
-
-
-
-        <!-- 기본 가격 -->
-
-        <div class="form-group">
-
-    <h2>기본 구매 정보</h2>
-
-
-    <!-- 스마트스토어 -->
-    <div class="store-box">
-
-        <h3>스마트스토어</h3>
-
-        <label>판매 가격</label>
-
-        <div class="price-input">
-
-            <input
-                type="number"
-                name="smartstore_price"
-                min="0"
-                placeholder="스마트스토어 가격"
-            >
-
-            <span>원</span>
-
-        </div>
-
-
-        <label>구매 사이트 URL</label>
-
-        <input
-            type="url"
-            name="smartstore_url"
-            placeholder="https://smartstore.naver.com/..."
-        >
-
-    </div>
-
-
-    <!-- 쿠팡 -->
-    <div class="store-box">
-
-        <h3>쿠팡</h3>
-
-        <label>판매 가격</label>
-
-        <div class="price-input">
-
-            <input
-                type="number"
-                name="coupang_price"
-                min="0"
-                placeholder="쿠팡 가격"
-            >
-
-            <span>원</span>
-
-        </div>
-
-
-        <label>구매 사이트 URL</label>
-
-        <input
-            type="url"
-            name="coupang_url"
-            placeholder="https://www.coupang.com/..."
-        >
-
-    </div>
-
-</div>
-
-
-
-        <!-- 옵션 -->
-
-        <div class="options-section">
-
-            <div class="options-header">
-
-                <div>
-
-                    <h2>
-                        상품 옵션
-                    </h2>
-
-                    <p>
-                        옵션마다 가격과
-                        구매 링크를 다르게
-                        설정할 수 있습니다.
-                    </p>
-
-                </div>
-
-                <button
-                    type="button"
-                    class="add-option-button"
-                    onclick="addOption()"
-                >
-                    + 옵션 추가
-                </button>
-
-            </div>
-
-
-            <div id="options-container">
-            </div>
-
-        </div>
-
-
-
-        <button
-            type="submit"
-            class="submit-product-button"
-        >
-            상품 등록
-        </button>
-
-
-    </form>
-
-<section class="admin-product-list">
-
-    <div class="admin-list-title">
-
-    <h2>
-        등록된 상품
-    </h2>
-
-    <div class="admin-list-tools">
-
-        <div class="admin-product-search">
-
-            <input
-                type="text"
-                id="admin-product-search-input"
-                placeholder="상품명 검색"
-                oninput="filterAdminProducts()"
-            >
-
-        </div>
-
-        <span id="admin-product-count">
-            총 {{ products|length }}개
-        </span>
-
-    </div>
-
-</div>
-
-
-    {% if products %}
-
-    <div class="admin-products">
-
-        {% for product in products %}
-
-        <div
-    class="admin-product-item"
-    data-product-name="{{ product['name']|lower }}"
->
-
-
-            <!-- 이미지 -->
-
-            <div class="admin-product-image">
-
-                {% if product["image_url"] %}
-
-                <img
-                    src="{{ product['image_url'] }}"
-                    alt="{{ product['name'] }}"
-                >
-
-                {% else %}
-
-                <span>
-                    이미지 없음
-                </span>
-
-                {% endif %}
-
-            </div>
-
-
-            <!-- 상품 정보 -->
-
-            <div class="admin-product-info">
-
-                <span class="admin-product-category">
-                    {{ product["category"] }}
-                </span>
-
-                <strong>
-                    {{ product["name"] }}
-                </strong>
-
-
-                <div class="admin-product-price">
-
-                    {% if product["smartstore_price"] %}
-
-                    <span>
-                        스마트스토어
-                        {{ "{:,}".format(product["smartstore_price"]) }}원
-                    </span>
-
-                    {% endif %}
-
-
-                    {% if product["coupang_price"] %}
-
-                    <span>
-                        쿠팡
-                        {{ "{:,}".format(product["coupang_price"]) }}원
-                    </span>
-
-                    {% endif %}
-
-                </div>
-
-            </div>
-
-
-            <!-- 관리 버튼 -->
-
-            <div class="admin-product-actions">
-
-                <a
-                    href="{{ url_for(
-                        'edit_product',
-                        product_id=product['id']
-                    ) }}"
-                    class="admin-edit-button"
-                >
-                    수정
-                </a>
+                <h1>
+                    상품 등록
+                </h1>
 
 
                 <form
                     method="POST"
-                    action="{{ url_for(
-                        'delete_product',
-                        product_id=product['id']
-                    ) }}"
-                    onsubmit="
-                        return confirm(
-                            '정말 이 상품을 삭제하시겠습니까?'
-                        );
-                    "
+                    enctype="multipart/form-data"
+                    class="product-form"
                 >
+
+
+                    <!-- 상품명 -->
+
+                    <div class="form-group">
+
+                        <label>
+                            상품명
+                        </label>
+
+                        <input
+                            type="text"
+                            name="name"
+                            required
+                        >
+
+                    </div>
+
+
+
+                    <!-- 카테고리 -->
+
+                    <div class="form-group">
+
+                        <label>
+                            상품 카테고리
+                        </label>
+
+                        <select
+                            name="category"
+                            required
+                            class="category-select"
+                        >
+
+                            <option value="">
+                                카테고리를 선택하세요
+                            </option>
+
+                            <option value="패션의류/잡화">
+                                패션의류/잡화
+                            </option>
+
+                            <option value="식품">
+                                식품
+                            </option>
+
+                            <option value="주방용품">
+                                주방용품
+                            </option>
+
+                            <option value="생활용품">
+                                생활용품
+                            </option>
+
+                            <option value="취미용품">
+                                취미용품
+                            </option>
+
+                            <option value="자동차용품">
+                                자동차용품
+                            </option>
+
+                            <option value="사무용품">
+                                사무용품
+                            </option>
+
+                            <option value="스포츠용품">
+                                스포츠용품
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+
+                    <!-- 상품 이미지 -->
+
+                    <div class="form-group">
+
+                        <label>
+                            상품 이미지
+                        </label>
+
+                        <p class="form-help">
+                            이미지 URL을 입력하거나 직접 파일을 업로드하세요.
+                        </p>
+
+                        <input
+                            type="url"
+                            name="image_url"
+                            placeholder="https://example.com/image.jpg"
+                        >
+
+                        <div class="or-text">
+                            또는
+                        </div>
+
+                        <input
+                            type="file"
+                            name="image_file"
+                            accept="image/*"
+                        >
+
+                    </div>
+
+
+
+                    <!-- 상품 설명 -->
+
+                    <div class="form-group">
+
+                        <label>
+                            상품 설명 HTML
+                        </label>
+
+                        <p class="form-help">
+                            HTML을 직접 입력하거나 HTML 파일을 업로드하세요.
+                        </p>
+
+                        <textarea
+                            name="description_html"
+                            rows="12"
+                            placeholder="<h2>상품 설명</h2>
+
+<p>상품 내용을 입력하세요.</p>"
+                        ></textarea>
+
+                        <div class="or-text">
+                            또는
+                        </div>
+
+                        <input
+                            type="file"
+                            name="description_file"
+                            accept=".html,.htm"
+                        >
+
+                    </div>
+
+
+
+                    <!-- ==================================================
+                         기본 구매 정보
+                    =================================================== -->
+
+                    <div class="form-group">
+
+                        <h2>
+                            기본 구매 정보
+                        </h2>
+
+
+                        <!-- 스마트스토어 -->
+
+                        <div class="store-box">
+
+                            <h3>
+                                스마트스토어
+                            </h3>
+
+                            <label>
+                                판매 가격
+                            </label>
+
+                            <div class="price-input">
+
+                                <input
+                                    type="number"
+                                    name="smartstore_price"
+                                    min="0"
+                                    placeholder="스마트스토어 가격"
+                                >
+
+                                <span>
+                                    원
+                                </span>
+
+                            </div>
+
+
+                            <label>
+                                구매 사이트 URL
+                            </label>
+
+                            <input
+                                type="url"
+                                name="smartstore_url"
+                                placeholder="https://smartstore.naver.com/..."
+                            >
+
+                        </div>
+
+
+
+                        <!-- 쿠팡 -->
+
+                        <div class="store-box">
+
+                            <h3>
+                                쿠팡
+                            </h3>
+
+                            <label>
+                                판매 가격
+                            </label>
+
+                            <div class="price-input">
+
+                                <input
+                                    type="number"
+                                    name="coupang_price"
+                                    min="0"
+                                    placeholder="쿠팡 가격"
+                                >
+
+                                <span>
+                                    원
+                                </span>
+
+                            </div>
+
+
+                            <label>
+                                구매 사이트 URL
+                            </label>
+
+                            <input
+                                type="url"
+                                name="coupang_url"
+                                placeholder="https://www.coupang.com/..."
+                            >
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- ==================================================
+                         옵션
+                    =================================================== -->
+
+                    <div class="options-section">
+
+                        <div class="options-header">
+
+                            <div>
+
+                                <h2>
+                                    상품 옵션
+                                </h2>
+
+                                <p>
+                                    옵션마다 가격과 구매 링크를 다르게 설정할 수 있습니다.
+                                </p>
+
+                            </div>
+
+
+                            <button
+                                type="button"
+                                class="add-option-button"
+                                onclick="addOption()"
+                            >
+                                + 옵션 추가
+                            </button>
+
+                        </div>
+
+
+                        <div id="options-container">
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- 상품 등록 -->
 
                     <button
                         type="submit"
-                        class="admin-delete-button"
+                        class="submit-product-button"
                     >
-                        삭제
+                        상품 등록
                     </button>
+
 
                 </form>
 
             </div>
 
+        </section>
 
-        </div>
 
-        {% endfor %}
+
+        <!-- ==================================================
+             오른쪽 : 등록된 상품 관리
+        =================================================== -->
+
+        <aside class="admin-right">
+
+            <section class="admin-product-list">
+
+
+                <!-- 제목 + 검색 -->
+
+                <div class="admin-list-title">
+
+                    <h2>
+                        등록된 상품
+                    </h2>
+
+
+                    <div class="admin-list-tools">
+
+                        <div class="admin-product-search">
+
+                            <input
+                                type="text"
+                                id="admin-product-search-input"
+                                placeholder="상품명 검색"
+                                oninput="filterAdminProducts()"
+                            >
+
+                        </div>
+
+
+                        <span id="admin-product-count">
+                            총 {{ products|length }}개
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- 상품 목록 -->
+
+                {% if products %}
+
+                <div class="admin-products">
+
+                    {% for product in products %}
+
+
+                    <div
+                        class="admin-product-item"
+                        data-product-name="{{ product['name']|lower }}"
+                    >
+
+
+                        <!-- 상품 이미지 -->
+
+                        <div class="admin-product-image">
+
+                            {% if product["image_url"] %}
+
+                            <img
+                                src="{{ product['image_url'] }}"
+                                alt="{{ product['name'] }}"
+                            >
+
+                            {% else %}
+
+                            <span>
+                                이미지 없음
+                            </span>
+
+                            {% endif %}
+
+                        </div>
+
+
+
+                        <!-- 상품 정보 -->
+
+                        <div class="admin-product-info">
+
+                            <span class="admin-product-category">
+                                {{ product["category"] }}
+                            </span>
+
+
+                            <strong>
+                                {{ product["name"] }}
+                            </strong>
+
+
+                            <div class="admin-product-price">
+
+                                {% if product["smartstore_price"] %}
+
+                                <span>
+                                    스마트스토어
+                                    {{ "{:,}".format(product["smartstore_price"]) }}원
+                                </span>
+
+                                {% endif %}
+
+
+                                {% if product["coupang_price"] %}
+
+                                <span>
+                                    쿠팡
+                                    {{ "{:,}".format(product["coupang_price"]) }}원
+                                </span>
+
+                                {% endif %}
+
+                            </div>
+
+                        </div>
+
+
+
+                        <!-- 수정 / 삭제 -->
+
+                        <div class="admin-product-actions">
+
+
+                            <a
+                                href="{{ url_for(
+                                    'edit_product',
+                                    product_id=product['id']
+                                ) }}"
+                                class="admin-edit-button"
+                            >
+                                수정
+                            </a>
+
+
+                            <form
+                                method="POST"
+                                action="{{ url_for(
+                                    'delete_product',
+                                    product_id=product['id']
+                                ) }}"
+                                onsubmit="
+                                    return confirm(
+                                        '정말 이 상품을 삭제하시겠습니까?'
+                                    );
+                                "
+                            >
+
+                                <button
+                                    type="submit"
+                                    class="admin-delete-button"
+                                >
+                                    삭제
+                                </button>
+
+                            </form>
+
+
+                        </div>
+
+
+                    </div>
+
+
+                    {% endfor %}
+
+                </div>
+
+
+                {% else %}
+
+
+                <div class="admin-empty-products">
+                    등록된 상품이 없습니다.
+                </div>
+
+
+                {% endif %}
+
+
+            </section>
+
+        </aside>
+
 
     </div>
-
-    {% else %}
-
-    <div class="admin-empty-products">
-        등록된 상품이 없습니다.
-    </div>
-
-    {% endif %}
-
-</section>
-
-</section>
 
 </main>
 
 
+
+<!-- ==================================================
+     옵션 추가 JavaScript
+=================================================== -->
 
 <script>
 
 function addOption() {
 
     const container =
-        document.getElementById("options-container");
+        document.getElementById(
+            "options-container"
+        );
 
     const option =
         document.createElement("div");
 
-    option.className = "option-row";
+    option.className =
+        "option-row";
+
 
     option.innerHTML = `
 
-        <!-- 옵션 상단 -->
         <div class="option-title-row">
 
             <div class="option-name-field">
 
-                <label>옵션명</label>
+                <label>
+                    옵션명
+                </label>
 
                 <input
                     type="text"
@@ -515,6 +599,7 @@ function addOption() {
                 >
 
             </div>
+
 
             <button
                 type="button"
@@ -527,16 +612,20 @@ function addOption() {
         </div>
 
 
-        <!-- 스마트스토어 -->
+
         <div class="option-store-box">
 
-            <h4>스마트스토어</h4>
+            <h4>
+                스마트스토어
+            </h4>
 
             <div class="option-store-fields">
 
                 <div>
 
-                    <label>판매 가격</label>
+                    <label>
+                        판매 가격
+                    </label>
 
                     <input
                         type="number"
@@ -550,7 +639,9 @@ function addOption() {
 
                 <div>
 
-                    <label>구매 URL</label>
+                    <label>
+                        구매 URL
+                    </label>
 
                     <input
                         type="url"
@@ -565,16 +656,20 @@ function addOption() {
         </div>
 
 
-        <!-- 쿠팡 -->
+
         <div class="option-store-box">
 
-            <h4>쿠팡</h4>
+            <h4>
+                쿠팡
+            </h4>
 
             <div class="option-store-fields">
 
                 <div>
 
-                    <label>판매 가격</label>
+                    <label>
+                        판매 가격
+                    </label>
 
                     <input
                         type="number"
@@ -588,7 +683,9 @@ function addOption() {
 
                 <div>
 
-                    <label>구매 URL</label>
+                    <label>
+                        구매 URL
+                    </label>
 
                     <input
                         type="url"
@@ -604,10 +701,18 @@ function addOption() {
 
     `;
 
+
     container.appendChild(option);
+
 }
 
 </script>
+
+
+
+<!-- ==================================================
+     상품 검색 JavaScript
+=================================================== -->
 
 <script>
 
@@ -618,22 +723,27 @@ function filterAdminProducts() {
             "admin-product-search-input"
         );
 
+
     const keyword =
         input.value
             .trim()
             .toLowerCase();
+
 
     const products =
         document.querySelectorAll(
             ".admin-product-item"
         );
 
+
     let visibleCount = 0;
+
 
     products.forEach(function(product) {
 
         const productName =
             product.dataset.productName || "";
+
 
         if (
             keyword === "" ||
@@ -651,16 +761,20 @@ function filterAdminProducts() {
 
     });
 
+
     const count =
         document.getElementById(
             "admin-product-count"
         );
 
+
     count.textContent =
         "총 " + visibleCount + "개";
+
 }
 
 </script>
+
 
 </body>
 

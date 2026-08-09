@@ -944,3 +944,116 @@ nav a.active {
     font-size: 14px;
     white-space: nowrap;
 }
+
+/* 관리자 등록 상품 영역을 화면 오른쪽으로 배치 */
+.admin-product-list {
+    max-width: 900px;
+    width: calc(100% - 40px);
+
+    margin-left: auto;
+    margin-right: 40px;
+}
+
+/* =========================
+   관리자 2열 레이아웃
+========================= */
+
+.admin-page {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 40px 30px 80px;
+}
+
+.admin-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(520px, 0.95fr);
+    gap: 40px;
+    align-items: start;
+}
+
+.admin-left,
+.admin-right {
+    min-width: 0;
+}
+
+
+/* 왼쪽 등록 영역 */
+
+.admin-left .admin-section {
+    max-width: none;
+    margin: 0;
+}
+
+
+/* 오른쪽 상품 관리 */
+
+.admin-product-list {
+    max-width: none;
+    width: 100%;
+    margin: 0;
+    padding-top: 0;
+    border-top: none;
+
+    position: sticky;
+    top: 25px;
+}
+
+.admin-list-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+
+    margin-bottom: 20px;
+}
+
+.admin-list-tools {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.admin-product-search input {
+    width: 210px;
+}
+
+
+/* 오른쪽 상품 목록 스크롤 */
+
+.admin-products {
+    max-height: calc(100vh - 150px);
+    overflow-y: auto;
+
+    padding-right: 5px;
+}
+
+
+/* 상품 관리 카드 */
+
+.admin-product-item {
+    grid-template-columns: 80px minmax(0, 1fr) auto;
+}
+
+.admin-product-image {
+    width: 80px;
+    height: 80px;
+}
+
+
+/* 작은 화면에서는 다시 1열 */
+
+@media (max-width: 1100px) {
+
+    .admin-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-product-list {
+        position: static;
+    }
+
+    .admin-products {
+        max-height: none;
+        overflow: visible;
+    }
+}
