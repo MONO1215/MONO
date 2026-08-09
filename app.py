@@ -1,21 +1,10 @@
-from flask import (
-    Flask,
-    render_template,
-    request,
-    redirect,
-    url_for,
-    session
-)
-
+from flask import Flask, render_template, request, redirect, url_for, session
 import os
-
-from functools import wraps
-
 import psycopg
 from psycopg.rows import dict_row
-
 from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash
+from functools import wraps
 
 
 # ==================================================
@@ -325,6 +314,109 @@ def product_detail(product_id):
 
 
 # ==================================================
+# 관리자 로그인 확인
+# ==================================================
+
+def admin_login_required(view_function):
+
+    @wraps(view_function)
+    def wrapped_view(*args, **kwargs):
+
+        if not session.get("admin_logged_in"):
+            return redirect(
+                url_for("admin_login")
+            )
+
+        return view_function(
+            *args,
+            **kwargs
+        )
+
+    return wrapped_view
+
+
+# ==================================================
+# 관리자 로그인
+# ==================================================
+
+@app.route(
+    "/admin/login",
+    methods=["GET", "POST"]
+)
+def admin_login():
+
+    error = None
+
+    if request.method == "POST":
+
+        username = request.form.get(
+            "username",
+            ""
+        ).strip()
+
+        password = request.form.get(
+            "password",
+            ""
+        )
+
+        conn = get_db_connection()
+
+        try:
+
+            with conn.cursor() as cur:
+
+                cur.execute("""
+                    SELECT *
+                    FROM admins
+                    WHERE username = %s
+                """, (
+                    username,
+                ))
+
+                admin_user = cur.fetchone()
+
+        finally:
+            conn.close()
+
+        if (
+            admin_user
+            and check_password_hash(
+                admin_user["password_hash"],
+                password
+            )
+        ):
+
+            session.clear()
+
+            session["admin_logged_in"] = True
+            session["admin_username"] = admin_user["username"]
+
+            return redirect(
+                url_for("admin")
+            )
+
+        error = "아이디 또는 비밀번호가 올바르지 않습니다."
+
+    return render_template(
+        "admin_login.html",
+        error=error
+    )
+
+
+# ==================================================
+# 관리자 로그아웃
+# ==================================================
+
+@app.route("/admin/logout")
+def admin_logout():
+
+    session.clear()
+
+    return redirect(
+        url_for("admin_login")
+    )
+
+# ==================================================
 # 관리자 상품 등록
 # ==================================================
 
@@ -332,6 +424,7 @@ def product_detail(product_id):
     "/admin",
     methods=["GET", "POST"]
 )
+@admin_login_required
 def admin():
 
     if request.method == "POST":
@@ -627,6 +720,7 @@ def admin():
     "/admin/product/<int:product_id>/edit",
     methods=["GET", "POST"]
 )
+@admin_login_required
 def edit_product(product_id):
 
     conn = get_db_connection()
@@ -935,6 +1029,7 @@ def edit_product(product_id):
     "/admin/product/<int:product_id>/delete",
     methods=["POST"]
 )
+@admin_login_required
 def delete_product(product_id):
 
     conn = get_db_connection()
