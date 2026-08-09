@@ -116,137 +116,137 @@
         </h2>
 
 
-        <div class="product-grid">
+        {% for product in products %}
 
-            {% for product in products %}
+<div class="product-card">
 
-            <a
-    href="{{ url_for('product_detail', product_id=product['id']) }}"
-    class="product-card product-card-link"
->
+    <a
+        href="{{ url_for('product_detail', product_id=product['id']) }}"
+        class="product-main-link"
+    >
 
+        <!-- 상품 이미지 -->
 
-                <!-- 상품 이미지 -->
+        {% if product["image_file"] %}
 
-                {% if product["image_file"] %}
+        <img
+            class="product-image-real"
+            src="{{ url_for(
+                'static',
+                filename='uploads/products/' + product['image_file']
+            ) }}"
+            alt="{{ product['name'] }}"
+        >
 
-                    <img
-                        class="product-image-real"
-                        src="{{ url_for(
-                            'static',
-                            filename='uploads/products/' + product['image_file']
-                        ) }}"
-                        alt="{{ product['name'] }}"
-                    >
+        {% elif product["image_url"] %}
 
-                {% elif product["image_url"] %}
+        <img
+            class="product-image-real"
+            src="{{ product['image_url'] }}"
+            alt="{{ product['name'] }}"
+        >
 
-                    <img
-                        class="product-image-real"
-                        src="{{ product['image_url'] }}"
-                        alt="{{ product['name'] }}"
-                    >
+        {% else %}
 
-                {% else %}
+        <div class="product-image">
+            상품 이미지
+        </div>
 
-                    <div class="product-image">
-                        상품 이미지
-                    </div>
-
-                {% endif %}
-
-
-                <!-- 카테고리 -->
-
-                <p class="product-category">
-                    {{ product["category"] }}
-                </p>
+        {% endif %}
 
 
-                <!-- 상품명 -->
+        <!-- 카테고리 -->
 
-                <h3>
-                    {{ product["name"] }}
-                </h3>
-
-
-                <!-- 가격 -->
-
-                <div class="store-prices">
-
-                    {% if product["smartstore_price"] %}
-
-                    <p>
-                        <span>
-                            스마트스토어
-                        </span>
-
-                        <strong>
-                            {{ "{:,}".format(product["smartstore_price"]) }}원
-                        </strong>
-                    </p>
-
-                    {% endif %}
+        <p class="product-category">
+            {{ product["category"] }}
+        </p>
 
 
-                    {% if product["coupang_price"] %}
+        <!-- 상품명 -->
 
-                    <p>
-                        <span>
-                            쿠팡
-                        </span>
+        <h3>
+            {{ product["name"] }}
+        </h3>
 
-                        <strong>
-                            {{ "{:,}".format(product["coupang_price"]) }}원
-                        </strong>
-                    </p>
-
-                    {% endif %}
-
-                </a>
+    </a>
 
 
-                <!-- 구매 버튼 -->
+    <!-- 가격 -->
 
-                <div class="purchase-buttons">
+    <div class="store-prices">
 
-                    {% if product["smartstore_url"] %}
+        {% if product["smartstore_price"] %}
 
-                    <a
-                        href="{{ product['smartstore_url'] }}"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        스마트스토어
-                    </a>
+        <p>
+            <span>
+                스마트스토어
+            </span>
 
-                    {% endif %}
+            <strong>
+                {{ "{:,}".format(product["smartstore_price"]) }}원
+            </strong>
+        </p>
 
-
-                    {% if product["coupang_url"] %}
-
-                    <a
-                        href="{{ product['coupang_url'] }}"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        쿠팡
-                    </a>
-
-                    {% endif %}
-
-                </div>
+        {% endif %}
 
 
-            </div>
+        {% if product["coupang_price"] %}
 
-            {% else %}
+        <p>
+            <span>
+                쿠팡
+            </span>
 
-            <div class="empty-products">
-                등록된 상품이 없습니다.
-            </div>
+            <strong>
+                {{ "{:,}".format(product["coupang_price"]) }}원
+            </strong>
+        </p>
 
-            {% endfor %}
+        {% endif %}
+
+    </div>
+
+
+    <!-- 구매 버튼 -->
+
+    <div class="purchase-buttons">
+
+        {% if product["smartstore_url"] %}
+
+        <a
+            href="{{ product['smartstore_url'] }}"
+            target="_blank"
+            rel="noopener noreferrer"
+        >
+            스마트스토어
+        </a>
+
+        {% endif %}
+
+
+        {% if product["coupang_url"] %}
+
+        <a
+            href="{{ product['coupang_url'] }}"
+            target="_blank"
+            rel="noopener noreferrer"
+        >
+            쿠팡
+        </a>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+{% else %}
+
+<div class="empty-products">
+    등록된 상품이 없습니다.
+</div>
+
+{% endfor %}
 
         </div>
 
