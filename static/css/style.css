@@ -1346,3 +1346,9 @@ nav a.active {
 
     font-size: 13px;
 }
+
+.user-header-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #222;
+}

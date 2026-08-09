@@ -74,13 +74,27 @@
                 스포츠용품
             </a>
 
-            <a href="{{ url_for('login') }}">
-    로그인
-</a>
+            {% if session.get("user_logged_in") %}
 
-<a href="{{ url_for('register') }}">
-    회원가입
-</a>
+    <span class="user-header-name">
+        {{ session.get("username") }}님
+    </span>
+
+    <a href="{{ url_for('logout') }}">
+        로그아웃
+    </a>
+
+{% else %}
+
+    <a href="{{ url_for('login') }}">
+        로그인
+    </a>
+
+    <a href="{{ url_for('register') }}">
+        회원가입
+    </a>
+
+{% endif %}
 
         </nav>
 
