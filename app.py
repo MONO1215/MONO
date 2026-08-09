@@ -1,14 +1,12 @@
 from flask import Flask, render_template, request, redirect, url_for
-import sqlite3
 import os
+import psycopg
+from psycopg.rows import dict_row
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-if os.environ.get("VERCEL"):
-    DATABASE = "/tmp/mono.db"
-else:
-    DATABASE = "mono.db"
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
 UPLOAD_FOLDER = os.path.join("static", "uploads", "products")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -20,9 +18,11 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 # DB 연결
 # =========================
 def get_db_connection():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
+    conn = psycopg.connect(
+        DATABASE_URL,
+        row_factory=dict_row,
+        prepare_threshold=None
+    )
     return conn
 
 
@@ -32,49 +32,52 @@ def get_db_connection():
 def init_db():
     conn = get_db_connection()
 
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS products (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            category TEXT NOT NULL,
+    with conn.cursor() as cur:
 
-            image_url TEXT,
-            image_file TEXT,
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS products (
+                id SERIAL PRIMARY KEY,
 
-            description_html TEXT,
+                name TEXT NOT NULL,
+                category TEXT NOT NULL,
 
-            smartstore_price INTEGER,
-            smartstore_url TEXT,
+                image_url TEXT,
+                image_file TEXT,
 
-            coupang_price INTEGER,
-            coupang_url TEXT,
+                description_html TEXT,
 
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
+                smartstore_price INTEGER,
+                smartstore_url TEXT,
 
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS product_options (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            product_id INTEGER NOT NULL,
+                coupang_price INTEGER,
+                coupang_url TEXT,
 
-            option_name TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
 
-            smartstore_price INTEGER,
-            smartstore_url TEXT,
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS product_options (
+                id SERIAL PRIMARY KEY,
 
-            coupang_price INTEGER,
-            coupang_url TEXT,
+                product_id INTEGER NOT NULL,
 
-            FOREIGN KEY (product_id)
-                REFERENCES products(id)
-                ON DELETE CASCADE
-        )
-    """)
+                option_name TEXT NOT NULL,
+
+                smartstore_price INTEGER,
+                smartstore_url TEXT,
+
+                coupang_price INTEGER,
+                coupang_url TEXT,
+
+                FOREIGN KEY (product_id)
+                    REFERENCES products(id)
+                    ON DELETE CASCADE
+            )
+        """)
 
     conn.commit()
     conn.close()
-
 
 # =========================
 # 메인 쇼핑몰
@@ -83,11 +86,14 @@ def init_db():
 def home():
     conn = get_db_connection()
 
-    products = conn.execute("""
-        SELECT *
-        FROM products
-        ORDER BY id DESC
-    """).fetchall()
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT *
+            FROM products
+            ORDER BY id DESC
+        """)
+
+        products = cur.fetchall()
 
     conn.close()
 
@@ -104,11 +110,14 @@ def home():
 def all_products():
     conn = get_db_connection()
 
-    products = conn.execute("""
-        SELECT *
-        FROM products
-        ORDER BY id DESC
-    """).fetchall()
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT *
+            FROM products
+            ORDER BY id DESC
+        """)
+
+        products = cur.fetchall()
 
     conn.close()
 
@@ -142,12 +151,17 @@ def category_page(category_slug):
 
     conn = get_db_connection()
 
-    products = conn.execute("""
-        SELECT *
-        FROM products
-        WHERE category = ?
-        ORDER BY id DESC
-    """, (category_name,)).fetchall()
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT *
+            FROM products
+            WHERE category = %s
+            ORDER BY id DESC
+        """, (
+            category_name,
+        ))
+
+        products = cur.fetchall()
 
     conn.close()
 
@@ -157,7 +171,6 @@ def category_page(category_slug):
         category_name=category_name,
         category_slug=category_slug
     )
-
 
 # =========================
 # 관리자 상품 등록
@@ -237,40 +250,46 @@ def admin():
         # -------------------------
         conn = get_db_connection()
 
-        cursor = conn.execute("""
-            INSERT INTO products (
-                name,
-                category,
-                image_url,
-                image_file,
-                description_html,
-                smartstore_price,
-                smartstore_url,
-                coupang_price,
-                coupang_url
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
+        with conn.cursor() as cur:
+
+    cur.execute("""
+        INSERT INTO products (
             name,
             category,
             image_url,
-            image_file_name,
+            image_file,
             description_html,
-
-            int(smartstore_price)
-            if smartstore_price
-            else None,
-
+            smartstore_price,
             smartstore_url,
-
-            int(coupang_price)
-            if coupang_price
-            else None,
-
+            coupang_price,
             coupang_url
-        ))
+        )
+        VALUES (
+            %s, %s, %s, %s, %s,
+            %s, %s, %s, %s
+        )
+        RETURNING id
+    """, (
+        name,
+        category,
+        image_url,
+        image_file_name,
+        description_html,
 
-        product_id = cursor.lastrowid
+        int(smartstore_price)
+        if smartstore_price
+        else None,
+
+        smartstore_url,
+
+        int(coupang_price)
+        if coupang_price
+        else None,
+
+        coupang_url
+    ))
+
+    product_id = cur.fetchone()["id"]
 
         # -------------------------
         # 옵션 값
@@ -317,32 +336,36 @@ def admin():
             if not option_name:
                 continue
 
-            conn.execute("""
-                INSERT INTO product_options (
-                    product_id,
-                    option_name,
-                    smartstore_price,
-                    smartstore_url,
-                    coupang_price,
-                    coupang_url
-                )
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (
-                product_id,
-                option_name,
+           with conn.cursor() as cur:
 
-                int(option_smart_price)
-                if option_smart_price
-                else None,
+    cur.execute("""
+        INSERT INTO product_options (
+            product_id,
+            option_name,
+            smartstore_price,
+            smartstore_url,
+            coupang_price,
+            coupang_url
+        )
+        VALUES (
+            %s, %s, %s, %s, %s, %s
+        )
+    """, (
+        product_id,
+        option_name,
 
-                option_smart_url.strip(),
+        int(option_smart_price)
+        if option_smart_price
+        else None,
 
-                int(option_coupang_price)
-                if option_coupang_price
-                else None,
+        option_smart_url.strip(),
 
-                option_coupang_url.strip()
-            ))
+        int(option_coupang_price)
+        if option_coupang_price
+        else None,
+
+        option_coupang_url.strip()
+    ))
 
         conn.commit()
         conn.close()
