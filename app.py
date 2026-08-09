@@ -580,27 +580,26 @@ def admin():
 
     conn = get_db_connection()
 
-try:
+    try:
 
-    with conn.cursor() as cur:
+        with conn.cursor() as cur:
 
-        cur.execute("""
-            SELECT *
-            FROM products
-            ORDER BY id DESC
-        """)
+            cur.execute("""
+                SELECT *
+                FROM products
+                ORDER BY id DESC
+            """)
 
-        products = cur.fetchall()
+            products = cur.fetchall()
 
-finally:
+    finally:
 
-    conn.close()
+        conn.close()
 
-
-return render_template(
-    "admin.html",
-    products=products
-)
+    return render_template(
+        "admin.html",
+        products=products
+    )
 
 # ==================================================
 # 상품 수정
