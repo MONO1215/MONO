@@ -173,6 +173,43 @@ def category_page(category_slug):
     )
 
 # =========================
+# 상품 상세 페이지
+# =========================
+@app.route("/product/<int:product_id>")
+def product_detail(product_id):
+    conn = get_db_connection()
+
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT *
+            FROM products
+            WHERE id = %s
+        """, (product_id,))
+
+        product = cur.fetchone()
+
+        if not product:
+            conn.close()
+            return redirect(url_for("home"))
+
+        cur.execute("""
+            SELECT *
+            FROM product_options
+            WHERE product_id = %s
+            ORDER BY id ASC
+        """, (product_id,))
+
+        options = cur.fetchall()
+
+    conn.close()
+
+    return render_template(
+        "product_detail.html",
+        product=product,
+        options=options
+    )
+
+# =========================
 # 관리자 상품 등록
 # =========================
 @app.route("/admin", methods=["GET", "POST"])

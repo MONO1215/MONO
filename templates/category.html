@@ -130,7 +130,10 @@
 
             {% for product in products %}
 
-            <div class="product-card">
+            <a
+    href="{{ url_for('product_detail', product_id=product['id']) }}"
+    class="product-card product-card-link"
+>
 
 
                 {% if product["image_file"] %}
@@ -206,7 +209,7 @@
 
                     {% endif %}
 
-                </div>
+                </a>
 
 
                 <div class="purchase-buttons">

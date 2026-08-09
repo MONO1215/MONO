@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>{{ product["name"] }} - MONO</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+</head>
+
+<body>
+
+
+<header>
+
+    <div class="header-container">
+
+        <a href="/" class="logo">
+            MONO
+        </a>
+
+        <nav>
+
+            <a href="/">홈</a>
+            <a href="/products">전체상품</a>
+
+            <a href="/category/fashion">
+                패션의류/잡화
+            </a>
+
+            <a href="/category/food">
+                식품
+            </a>
+
+            <a href="/category/kitchen">
+                주방용품
+            </a>
+
+            <a href="/category/living">
+                생활용품
+            </a>
+
+            <a href="/category/hobby">
+                취미용품
+            </a>
+
+            <a href="/category/car">
+                자동차용품
+            </a>
+
+            <a href="/category/office">
+                사무용품
+            </a>
+
+            <a href="/category/sports">
+                스포츠용품
+            </a>
+
+        </nav>
+
+    </div>
+
+</header>
+
+
+<main class="product-detail-page">
+
+    <div class="product-detail-top">
+
+
+        <!-- 상품 이미지 -->
+
+        <div class="product-detail-image">
+
+            {% if product["image_file"] %}
+
+            <img
+                src="{{ url_for(
+                    'static',
+                    filename='uploads/products/' + product['image_file']
+                ) }}"
+                alt="{{ product['name'] }}"
+            >
+
+            {% elif product["image_url"] %}
+
+            <img
+                src="{{ product['image_url'] }}"
+                alt="{{ product['name'] }}"
+            >
+
+            {% else %}
+
+            <div class="product-detail-placeholder">
+                상품 이미지
+            </div>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- 상품 정보 -->
+
+        <div class="product-detail-info">
+
+            <p class="product-detail-category">
+                {{ product["category"] }}
+            </p>
+
+            <h1>
+                {{ product["name"] }}
+            </h1>
+
+
+            <div class="product-store-section">
+
+                {% if product["smartstore_price"] %}
+
+                <div class="detail-store-box">
+
+                    <div>
+                        <span>스마트스토어</span>
+
+                        <strong>
+                            {{ "{:,}".format(product["smartstore_price"]) }}원
+                        </strong>
+                    </div>
+
+                    {% if product["smartstore_url"] %}
+
+                    <a
+                        href="{{ product['smartstore_url'] }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        구매하기
+                    </a>
+
+                    {% endif %}
+
+                </div>
+
+                {% endif %}
+
+
+                {% if product["coupang_price"] %}
+
+                <div class="detail-store-box">
+
+                    <div>
+                        <span>쿠팡</span>
+
+                        <strong>
+                            {{ "{:,}".format(product["coupang_price"]) }}원
+                        </strong>
+                    </div>
+
+                    {% if product["coupang_url"] %}
+
+                    <a
+                        href="{{ product['coupang_url'] }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        구매하기
+                    </a>
+
+                    {% endif %}
+
+                </div>
+
+                {% endif %}
+
+            </div>
+
+
+            <!-- 옵션 -->
+
+            {% if options %}
+
+            <div class="detail-options">
+
+                <h2>
+                    상품 옵션
+                </h2>
+
+                {% for option in options %}
+
+                <div class="detail-option-box">
+
+                    <h3>
+                        {{ option["option_name"] }}
+                    </h3>
+
+
+                    {% if option["smartstore_price"] %}
+
+                    <div class="detail-option-store">
+
+                        <span>
+                            스마트스토어
+                        </span>
+
+                        <strong>
+                            {{ "{:,}".format(option["smartstore_price"]) }}원
+                        </strong>
+
+                        {% if option["smartstore_url"] %}
+
+                        <a
+                            href="{{ option['smartstore_url'] }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            구매
+                        </a>
+
+                        {% endif %}
+
+                    </div>
+
+                    {% endif %}
+
+
+                    {% if option["coupang_price"] %}
+
+                    <div class="detail-option-store">
+
+                        <span>
+                            쿠팡
+                        </span>
+
+                        <strong>
+                            {{ "{:,}".format(option["coupang_price"]) }}원
+                        </strong>
+
+                        {% if option["coupang_url"] %}
+
+                        <a
+                            href="{{ option['coupang_url'] }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            구매
+                        </a>
+
+                        {% endif %}
+
+                    </div>
+
+                    {% endif %}
+
+                </div>
+
+                {% endfor %}
+
+            </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    <!-- 상품 설명 -->
+
+    {% if product["description_html"] %}
+
+    <section class="product-description-detail">
+
+        {{ product["description_html"] | safe }}
+
+    </section>
+
+    {% endif %}
+
+</main>
+
+
+</body>
+
+</html>
