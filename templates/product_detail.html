@@ -2,7 +2,9 @@
 <html lang="ko">
 
 <head>
+
     <meta charset="UTF-8">
+
     <meta
         name="viewport"
         content="width=device-width, initial-scale=1.0"
@@ -14,7 +16,9 @@
         rel="stylesheet"
         href="{{ url_for('static', filename='css/style.css') }}"
     >
+
 </head>
+
 
 <body>
 
@@ -29,8 +33,13 @@
 
         <nav>
 
-            <a href="/">홈</a>
-            <a href="/products">전체상품</a>
+            <a href="/">
+                홈
+            </a>
+
+            <a href="/products">
+                전체상품
+            </a>
 
             <a href="/category/fashion">
                 패션의류/잡화
@@ -64,6 +73,32 @@
                 스포츠용품
             </a>
 
+
+            {% if session.get("user_logged_in") %}
+
+                <a
+                    href="{{ url_for('profile') }}"
+                    class="user-header-name"
+                >
+                    {{ session.get("username") }}님
+                </a>
+
+                <a href="{{ url_for('logout') }}">
+                    로그아웃
+                </a>
+
+            {% else %}
+
+                <a href="{{ url_for('login') }}">
+                    로그인
+                </a>
+
+                <a href="{{ url_for('register') }}">
+                    회원가입
+                </a>
+
+            {% endif %}
+
         </nav>
 
     </div>
@@ -71,7 +106,13 @@
 </header>
 
 
+
 <main class="product-detail-page">
+
+
+    <!-- ==================================================
+         상품 상단
+    ================================================== -->
 
     <div class="product-detail-top">
 
@@ -82,30 +123,31 @@
 
             {% if product["image_file"] %}
 
-            <img
-                src="{{ url_for(
-                    'static',
-                    filename='uploads/products/' + product['image_file']
-                ) }}"
-                alt="{{ product['name'] }}"
-            >
+                <img
+                    src="{{ url_for(
+                        'static',
+                        filename='uploads/products/' + product['image_file']
+                    ) }}"
+                    alt="{{ product['name'] }}"
+                >
 
             {% elif product["image_url"] %}
 
-            <img
-                src="{{ product['image_url'] }}"
-                alt="{{ product['name'] }}"
-            >
+                <img
+                    src="{{ product['image_url'] }}"
+                    alt="{{ product['name'] }}"
+                >
 
             {% else %}
 
-            <div class="product-detail-placeholder">
-                상품 이미지
-            </div>
+                <div class="product-detail-placeholder">
+                    상품 이미지
+                </div>
 
             {% endif %}
 
         </div>
+
 
 
         <!-- 상품 정보 -->
@@ -121,19 +163,28 @@
             </h1>
 
 
+
+            <!-- 기본 구매처 -->
+
             <div class="product-store-section">
+
 
                 {% if product["smartstore_price"] %}
 
                 <div class="detail-store-box">
 
                     <div>
-                        <span>스마트스토어</span>
+
+                        <span>
+                            스마트스토어
+                        </span>
 
                         <strong>
                             {{ "{:,}".format(product["smartstore_price"]) }}원
                         </strong>
+
                     </div>
+
 
                     {% if product["smartstore_url"] %}
 
@@ -152,17 +203,23 @@
                 {% endif %}
 
 
+
                 {% if product["coupang_price"] %}
 
                 <div class="detail-store-box">
 
                     <div>
-                        <span>쿠팡</span>
+
+                        <span>
+                            쿠팡
+                        </span>
 
                         <strong>
                             {{ "{:,}".format(product["coupang_price"]) }}원
                         </strong>
+
                     </div>
+
 
                     {% if product["coupang_url"] %}
 
@@ -183,7 +240,10 @@
             </div>
 
 
-            <!-- 옵션 -->
+
+            <!-- ==================================================
+                 상품 옵션
+            ================================================== -->
 
             {% if options %}
 
@@ -192,6 +252,7 @@
                 <h2>
                     상품 옵션
                 </h2>
+
 
                 {% for option in options %}
 
@@ -214,6 +275,7 @@
                             {{ "{:,}".format(option["smartstore_price"]) }}원
                         </strong>
 
+
                         {% if option["smartstore_url"] %}
 
                         <a
@@ -231,6 +293,7 @@
                     {% endif %}
 
 
+
                     {% if option["coupang_price"] %}
 
                     <div class="detail-option-store">
@@ -242,6 +305,7 @@
                         <strong>
                             {{ "{:,}".format(option["coupang_price"]) }}원
                         </strong>
+
 
                         {% if option["coupang_url"] %}
 
@@ -267,45 +331,73 @@
 
             {% endif %}
 
+
         </div>
 
     </div>
 
 
-    <!-- 상품 설명 -->
 
-    {% if product["description_html"] %}
+    <!-- ==================================================
+         상품 상세 설명
+    ================================================== -->
 
     <section class="product-description-detail">
 
-    {% if product["has_description_image"] %}
+        <h2 class="product-description-title">
+            상품 상세정보
+        </h2>
 
-        <img
-            src="{{ url_for(
-                'product_description_image',
-                product_id=product['id']
-            ) }}"
-            alt="{{ product['name'] }} 상품 설명"
-            class="product-description-image"
-        >
 
-    {% elif product["description_html"] %}
+        {% if product["has_description_image"] %}
 
-        {{ product["description_html"] | safe }}
+            <div class="product-description-image-wrap">
 
-    {% else %}
+                <img
+                    src="{{ url_for(
+                        'product_description_image',
+                        product_id=product['id']
+                    ) }}"
+                    alt="{{ product['name'] }} 상품 상세 설명"
+                    class="product-description-image"
+                >
 
-        <p>
-            등록된 상품 설명이 없습니다.
-        </p>
+            </div>
 
-    {% endif %}
 
-</section>
+        {% elif product["description_html"] %}
 
-    {% endif %}
+            <div class="product-description-html">
+
+                {{ product["description_html"] | safe }}
+
+            </div>
+
+
+        {% else %}
+
+            <div class="product-description-empty">
+
+                등록된 상품 상세 설명이 없습니다.
+
+            </div>
+
+        {% endif %}
+
+    </section>
+
 
 </main>
+
+
+
+<footer>
+
+    <p>
+        © 2026 MONO. All rights reserved.
+    </p>
+
+</footer>
 
 
 </body>

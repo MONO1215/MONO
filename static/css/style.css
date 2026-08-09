@@ -1799,3 +1799,61 @@ nav a.active {
 
     margin: 0 auto;
 }
+
+/* ==================================================
+   상품 상세 설명
+================================================== */
+
+.product-description-detail {
+    width: 100%;
+    max-width: 1000px;
+
+    margin: 80px auto 0;
+    padding-top: 50px;
+
+    border-top: 1px solid #eeeeee;
+}
+
+.product-description-title {
+    margin-bottom: 30px;
+
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.product-description-image-wrap {
+    width: 100%;
+    text-align: center;
+}
+
+.product-description-image {
+    display: block;
+
+    width: 100%;
+    max-width: 100%;
+
+    height: auto;
+
+    margin: 0 auto;
+}
+
+.product-description-html {
+    width: 100%;
+    line-height: 1.8;
+}
+
+.product-description-html img {
+    max-width: 100%;
+    height: auto;
+}
+
+.product-description-empty {
+    padding: 60px 20px;
+
+    text-align: center;
+
+    color: #999;
+    background: #fafafa;
+
+    border-radius: 8px;
+}
