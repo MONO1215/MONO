@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>내 정보 수정 | MONO</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+
+</head>
+
+
+<body>
+
+<header>
+
+    <div class="header-container">
+
+        <a href="/" class="logo">
+            MONO
+        </a>
+
+        <nav>
+
+            <a href="{{ url_for('profile') }}">
+                내 정보
+            </a>
+
+            <a href="/">
+                쇼핑몰
+            </a>
+
+            <a href="{{ url_for('logout') }}">
+                로그아웃
+            </a>
+
+        </nav>
+
+    </div>
+
+</header>
+
+
+<main class="profile-edit-page">
+
+    <div class="profile-edit-header">
+
+        <h1>
+            내 정보 수정
+        </h1>
+
+        <p>
+            회원 정보를 변경할 수 있습니다.
+        </p>
+
+    </div>
+
+
+    {% if error %}
+
+    <div class="profile-edit-error">
+        {{ error }}
+    </div>
+
+    {% endif %}
+
+
+    <form
+        method="POST"
+        class="profile-edit-form"
+    >
+
+
+        <!-- 아이디 -->
+
+        <div class="profile-edit-field">
+
+            <label>
+                아이디
+            </label>
+
+            <input
+                type="text"
+                value="{{ user['username'] }}"
+                disabled
+            >
+
+            <p>
+                아이디는 변경할 수 없습니다.
+            </p>
+
+        </div>
+
+
+        <!-- 이름 -->
+
+        <div class="profile-edit-field">
+
+            <label>
+                이름
+            </label>
+
+            <input
+                type="text"
+                name="name"
+                value="{{ user['name'] }}"
+                required
+            >
+
+        </div>
+
+
+        <!-- 전화번호 -->
+
+        <div class="profile-edit-field">
+
+            <label>
+                전화번호
+            </label>
+
+            <input
+                type="tel"
+                name="phone"
+                value="{{ user['phone'] or '' }}"
+                placeholder="010-1234-5678"
+            >
+
+        </div>
+
+
+        <!-- 이메일 -->
+
+        <div class="profile-edit-field">
+
+            <label>
+                이메일
+            </label>
+
+            <input
+                type="email"
+                name="email"
+                value="{{ user['email'] }}"
+                required
+            >
+
+        </div>
+
+
+        <div class="profile-edit-actions">
+
+            <a
+                href="{{ url_for('profile') }}"
+                class="profile-edit-cancel"
+            >
+                취소
+            </a>
+
+            <button
+                type="submit"
+                class="profile-edit-save"
+            >
+                변경사항 저장
+            </button>
+
+        </div>
+
+    </form>
+
+</main>
+
+</body>
+
+</html>

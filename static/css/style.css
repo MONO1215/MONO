@@ -1615,3 +1615,176 @@ nav a.active {
     }
 
 }
+
+/* ==================================================
+   회원정보 수정
+================================================== */
+
+.profile-info-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-bottom: 25px;
+}
+
+.profile-info-title h2 {
+    margin-bottom: 0;
+}
+
+.profile-edit-button {
+    padding: 9px 15px;
+
+    border: 1px solid #ddd;
+    border-radius: 6px;
+
+    color: #111;
+    background: #fff;
+
+    font-size: 13px;
+    font-weight: 600;
+
+    text-decoration: none;
+}
+
+.profile-edit-button:hover {
+    background: #f5f5f5;
+}
+
+
+/* 수정 페이지 */
+
+.profile-edit-page {
+    width: 100%;
+    max-width: 650px;
+
+    margin: 0 auto;
+    padding: 70px 20px 120px;
+}
+
+.profile-edit-header {
+    margin-bottom: 35px;
+}
+
+.profile-edit-header h1 {
+    margin-bottom: 8px;
+
+    font-size: 30px;
+}
+
+.profile-edit-header p {
+    color: #777;
+    font-size: 14px;
+}
+
+
+/* 입력창 */
+
+.profile-edit-form {
+    padding: 30px;
+
+    border: 1px solid #e5e5e5;
+    border-radius: 10px;
+
+    background: #fff;
+}
+
+.profile-edit-field {
+    margin-bottom: 25px;
+}
+
+.profile-edit-field label {
+    display: block;
+
+    margin-bottom: 8px;
+
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.profile-edit-field input {
+    width: 100%;
+
+    padding: 14px;
+
+    border: 1px solid #ddd;
+    border-radius: 7px;
+
+    font-size: 15px;
+}
+
+.profile-edit-field input:focus {
+    outline: none;
+    border-color: #555;
+}
+
+.profile-edit-field input:disabled {
+    background: #f5f5f5;
+    color: #888;
+}
+
+.profile-edit-field p {
+    margin-top: 7px;
+
+    color: #999;
+    font-size: 12px;
+}
+
+
+/* 오류 */
+
+.profile-edit-error {
+    margin-bottom: 20px;
+    padding: 13px;
+
+    border: 1px solid #ffd4d4;
+    border-radius: 7px;
+
+    background: #fff4f4;
+    color: #c33;
+
+    font-size: 13px;
+}
+
+
+/* 버튼 */
+
+.profile-edit-actions {
+    display: flex;
+    justify-content: flex-end;
+
+    gap: 10px;
+
+    margin-top: 35px;
+}
+
+.profile-edit-cancel,
+.profile-edit-save {
+    padding: 12px 18px;
+
+    border-radius: 7px;
+
+    font-size: 14px;
+    font-weight: 600;
+
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.profile-edit-cancel {
+    border: 1px solid #ddd;
+
+    background: white;
+    color: #111;
+}
+
+.profile-edit-save {
+    border: none;
+
+    background: #111;
+    color: white;
+}
+
+.profile-edit-save:hover {
+    background: #333;
+}

@@ -645,6 +645,152 @@ def profile():
     )
 
 # ==================================================
+# 내 정보 수정
+# ==================================================
+
+@app.route(
+    "/profile/edit",
+    methods=["GET", "POST"]
+)
+def edit_profile():
+
+    if not session.get("user_logged_in"):
+        return redirect(
+            url_for("login")
+        )
+
+    user_id = session.get("user_id")
+    error = None
+
+    conn = get_db_connection()
+
+    try:
+
+        # 현재 회원정보
+        with conn.cursor() as cur:
+
+            cur.execute("""
+                SELECT
+                    id,
+                    name,
+                    username,
+                    phone,
+                    email
+                FROM users
+                WHERE id = %s
+            """, (
+                user_id,
+            ))
+
+            user = cur.fetchone()
+
+
+        if user is None:
+
+            session.pop("user_logged_in", None)
+            session.pop("user_id", None)
+            session.pop("username", None)
+
+            return redirect(
+                url_for("login")
+            )
+
+
+        # ==========================================
+        # 수정 저장
+        # ==========================================
+
+        if request.method == "POST":
+
+            name = request.form.get(
+                "name",
+                ""
+            ).strip()
+
+            phone = request.form.get(
+                "phone",
+                ""
+            ).strip()
+
+            email = request.form.get(
+                "email",
+                ""
+            ).strip()
+
+
+            if not name:
+
+                error = "이름을 입력해주세요."
+
+            elif not email:
+
+                error = "이메일을 입력해주세요."
+
+
+            if error is None:
+
+                # 다른 회원이 같은 이메일을 쓰는지 확인
+                with conn.cursor() as cur:
+
+                    cur.execute("""
+                        SELECT id
+                        FROM users
+                        WHERE email = %s
+                        AND id != %s
+                    """, (
+                        email,
+                        user_id
+                    ))
+
+                    existing_email = cur.fetchone()
+
+
+                if existing_email:
+
+                    error = "이미 사용 중인 이메일입니다."
+
+                else:
+
+                    with conn.cursor() as cur:
+
+                        cur.execute("""
+                            UPDATE users
+                            SET
+                                name = %s,
+                                phone = %s,
+                                email = %s
+                            WHERE id = %s
+                        """, (
+                            name,
+                            phone,
+                            email,
+                            user_id
+                        ))
+
+                    conn.commit()
+
+                    return redirect(
+                        url_for("profile")
+                    )
+
+
+    except Exception:
+
+        conn.rollback()
+        raise
+
+    finally:
+
+        conn.close()
+
+
+    return render_template(
+        "edit_profile.html",
+        user=user,
+        error=error
+    )
+
+# ==================================================
 # 출석체크
 # ==================================================
 
