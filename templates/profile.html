@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>내 정보 | MONO</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+
+</head>
+
+<body>
+
+<header>
+
+    <div class="header-container">
+
+        <a href="/" class="logo">
+            MONO
+        </a>
+
+        <nav>
+
+            <a href="/">
+                쇼핑몰
+            </a>
+
+            <a href="{{ url_for('logout') }}">
+                로그아웃
+            </a>
+
+        </nav>
+
+    </div>
+
+</header>
+
+
+<main class="profile-page">
+
+    <div class="profile-header">
+
+        <div>
+
+            <p class="profile-label">
+                MY MONO
+            </p>
+
+            <h1>
+                {{ user["username"] }}님
+            </h1>
+
+            <p>
+                회원 정보를 확인할 수 있습니다.
+            </p>
+
+        </div>
+
+        <div class="profile-level">
+            Lv. {{ user["level"] }}
+        </div>
+
+    </div>
+
+
+    <div class="profile-stats">
+
+        <div class="profile-stat">
+
+            <span>포인트</span>
+
+            <strong>
+                {{ "{:,}".format(user["point"]) }} P
+            </strong>
+
+        </div>
+
+
+        <div class="profile-stat">
+
+            <span>경험치</span>
+
+            <strong>
+                {{ "{:,}".format(user["exp"]) }} EXP
+            </strong>
+
+        </div>
+
+
+        <div class="profile-stat">
+
+            <span>연속 출석</span>
+
+            <strong>
+                {{ user["streak"] }}일
+            </strong>
+
+        </div>
+
+    </div>
+
+
+    <section class="profile-info-box">
+
+        <h2>
+            회원 정보
+        </h2>
+
+
+        <div class="profile-info-row">
+
+            <span>이름</span>
+
+            <strong>
+                {{ user["name"] }}
+            </strong>
+
+        </div>
+
+
+        <div class="profile-info-row">
+
+            <span>아이디</span>
+
+            <strong>
+                {{ user["username"] }}
+            </strong>
+
+        </div>
+
+
+        <div class="profile-info-row">
+
+            <span>전화번호</span>
+
+            <strong>
+                {{ user["phone"] or "-" }}
+            </strong>
+
+        </div>
+
+
+        <div class="profile-info-row">
+
+            <span>이메일</span>
+
+            <strong>
+                {{ user["email"] }}
+            </strong>
+
+        </div>
+
+
+        <div class="profile-info-row">
+
+            <span>마지막 출석</span>
+
+            <strong>
+                {{ user["last_attendance"] or "출석 기록 없음" }}
+            </strong>
+
+        </div>
+
+    </section>
+
+</main>
+
+</body>
+</html>

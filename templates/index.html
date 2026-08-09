@@ -76,9 +76,12 @@
 
             {% if session.get("user_logged_in") %}
 
-    <span class="user-header-name">
-        {{ session.get("username") }}님
-    </span>
+    <a
+    href="{{ url_for('profile') }}"
+    class="user-header-name"
+>
+    {{ session.get("username") }}님
+</a>
 
     <a href="{{ url_for('logout') }}">
         로그아웃

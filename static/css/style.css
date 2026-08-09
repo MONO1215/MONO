@@ -1352,3 +1352,157 @@ nav a.active {
     font-weight: 600;
     color: #222;
 }
+
+/* ==================================================
+   내 정보
+================================================== */
+
+.user-header-name {
+    color: #111;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.user-header-name:hover {
+    text-decoration: underline;
+}
+
+
+/* 프로필 */
+
+.profile-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 70px 20px 120px;
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-bottom: 35px;
+}
+
+.profile-label {
+    margin-bottom: 8px;
+
+    color: #999;
+
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.profile-header h1 {
+    margin-bottom: 8px;
+
+    font-size: 30px;
+}
+
+.profile-header p {
+    color: #777;
+}
+
+.profile-level {
+    padding: 12px 18px;
+
+    background: #111;
+    color: #fff;
+
+    border-radius: 8px;
+
+    font-size: 16px;
+    font-weight: 700;
+}
+
+
+/* 포인트 / 경험치 / 출석 */
+
+.profile-stats {
+    display: grid;
+
+    grid-template-columns: repeat(3, 1fr);
+
+    gap: 15px;
+
+    margin-bottom: 40px;
+}
+
+.profile-stat {
+    padding: 25px;
+
+    border: 1px solid #e5e5e5;
+    border-radius: 10px;
+
+    background: #fff;
+}
+
+.profile-stat span {
+    display: block;
+
+    margin-bottom: 10px;
+
+    color: #888;
+
+    font-size: 13px;
+}
+
+.profile-stat strong {
+    font-size: 21px;
+}
+
+
+/* 회원정보 */
+
+.profile-info-box {
+    padding: 30px;
+
+    border: 1px solid #e5e5e5;
+    border-radius: 10px;
+}
+
+.profile-info-box h2 {
+    margin-bottom: 25px;
+
+    font-size: 20px;
+}
+
+.profile-info-row {
+    display: grid;
+
+    grid-template-columns: 150px 1fr;
+
+    padding: 17px 0;
+
+    border-bottom: 1px solid #eee;
+}
+
+.profile-info-row:last-child {
+    border-bottom: none;
+}
+
+.profile-info-row span {
+    color: #888;
+
+    font-size: 14px;
+}
+
+.profile-info-row strong {
+    font-size: 14px;
+}
+
+
+/* 모바일 */
+
+@media (max-width: 600px) {
+
+    .profile-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-info-row {
+        grid-template-columns: 100px 1fr;
+    }
+
+}

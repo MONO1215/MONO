@@ -581,6 +581,69 @@ def logout():
 
 
 # ==================================================
+# 내 정보 / 프로필
+# ==================================================
+
+@app.route("/profile")
+def profile():
+
+    # 로그인하지 않은 사용자
+    if not session.get("user_logged_in"):
+        return redirect(
+            url_for("login")
+        )
+
+    user_id = session.get("user_id")
+
+    conn = get_db_connection()
+
+    try:
+
+        with conn.cursor() as cur:
+
+            cur.execute("""
+                SELECT
+                    id,
+                    name,
+                    username,
+                    phone,
+                    email,
+                    level,
+                    point,
+                    exp,
+                    streak,
+                    last_attendance,
+                    created_at
+                FROM users
+                WHERE id = %s
+            """, (
+                user_id,
+            ))
+
+            user = cur.fetchone()
+
+    finally:
+        conn.close()
+
+
+    # DB에서 회원을 찾지 못한 경우
+    if user is None:
+
+        session.pop("user_logged_in", None)
+        session.pop("user_id", None)
+        session.pop("username", None)
+
+        return redirect(
+            url_for("login")
+        )
+
+
+    return render_template(
+        "profile.html",
+        user=user
+    )
+
+# ==================================================
 # 관리자 로그인 확인
 # ==================================================
 
