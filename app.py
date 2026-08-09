@@ -348,10 +348,14 @@ def admin():
 
     return render_template("admin.html")
 
+# =========================
+# DB 초기화
+# =========================
+init_db()
+
 
 # =========================
-# 실행
+# 로컬 실행
 # =========================
 if __name__ == "__main__":
-    init_db()
     app.run(debug=True)
