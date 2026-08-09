@@ -691,3 +691,14 @@ nav a.active {
 .product-main-link:hover h3 {
     text-decoration: underline;
 }
+
+.product-main-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.product-main-link:hover h3 {
+    text-decoration: underline;
+}

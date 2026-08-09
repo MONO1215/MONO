@@ -120,12 +120,11 @@
 
 <div class="product-card">
 
+    <!-- 상세페이지로 이동하는 영역 -->
     <a
-        href="{{ url_for('product_detail', product_id=product['id']) }}"
+        href="/product/{{ product['id'] }}"
         class="product-main-link"
     >
-
-        <!-- 상품 이미지 -->
 
         {% if product["image_file"] %}
 
@@ -155,14 +154,9 @@
         {% endif %}
 
 
-        <!-- 카테고리 -->
-
         <p class="product-category">
             {{ product["category"] }}
         </p>
-
-
-        <!-- 상품명 -->
 
         <h3>
             {{ product["name"] }}
@@ -172,15 +166,12 @@
 
 
     <!-- 가격 -->
-
     <div class="store-prices">
 
         {% if product["smartstore_price"] %}
 
         <p>
-            <span>
-                스마트스토어
-            </span>
+            <span>스마트스토어</span>
 
             <strong>
                 {{ "{:,}".format(product["smartstore_price"]) }}원
@@ -193,9 +184,7 @@
         {% if product["coupang_price"] %}
 
         <p>
-            <span>
-                쿠팡
-            </span>
+            <span>쿠팡</span>
 
             <strong>
                 {{ "{:,}".format(product["coupang_price"]) }}원
@@ -208,7 +197,6 @@
 
 
     <!-- 구매 버튼 -->
-
     <div class="purchase-buttons">
 
         {% if product["smartstore_url"] %}
