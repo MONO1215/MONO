@@ -278,9 +278,30 @@
 
     <section class="product-description-detail">
 
+    {% if product["has_description_image"] %}
+
+        <img
+            src="{{ url_for(
+                'product_description_image',
+                product_id=product['id']
+            ) }}"
+            alt="{{ product['name'] }} 상품 설명"
+            class="product-description-image"
+        >
+
+    {% elif product["description_html"] %}
+
         {{ product["description_html"] | safe }}
 
-    </section>
+    {% else %}
+
+        <p>
+            등록된 상품 설명이 없습니다.
+        </p>
+
+    {% endif %}
+
+</section>
 
     {% endif %}
 
