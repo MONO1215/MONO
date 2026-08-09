@@ -1,8 +1,21 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import (
+    Flask,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    session
+)
+
 import os
+
+from functools import wraps
+
 import psycopg
 from psycopg.rows import dict_row
+
 from werkzeug.utils import secure_filename
+from werkzeug.security import check_password_hash
 
 
 # ==================================================
@@ -10,6 +23,11 @@ from werkzeug.utils import secure_filename
 # ==================================================
 
 app = Flask(__name__)
+
+app.secret_key = os.environ.get(
+    "SECRET_KEY",
+    "mono-admin-session-secret-2026"
+)
 
 
 # ==================================================

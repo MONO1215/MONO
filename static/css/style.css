@@ -1057,3 +1057,140 @@ nav a.active {
         overflow: visible;
     }
 }
+
+/* ==================================================
+   관리자 로그인
+================================================== */
+
+.admin-login-body {
+    min-height: 100vh;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: #f7f7f7;
+}
+
+.admin-login-container {
+    width: 100%;
+    max-width: 430px;
+
+    padding: 30px;
+}
+
+.admin-login-logo {
+    display: block;
+
+    margin-bottom: 25px;
+
+    text-align: center;
+    text-decoration: none;
+
+    color: #111;
+
+    font-size: 32px;
+    font-weight: 700;
+}
+
+.admin-login-box {
+    padding: 40px;
+
+    background: #ffffff;
+
+    border: 1px solid #eeeeee;
+    border-radius: 12px;
+}
+
+.admin-login-box h1 {
+    margin-bottom: 8px;
+
+    font-size: 25px;
+}
+
+.admin-login-description {
+    margin-bottom: 30px;
+
+    color: #888;
+
+    font-size: 14px;
+}
+
+.admin-login-field {
+    margin-bottom: 20px;
+}
+
+.admin-login-field label {
+    display: block;
+
+    margin-bottom: 8px;
+
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.admin-login-field input {
+    width: 100%;
+
+    padding: 14px;
+
+    border: 1px solid #dddddd;
+    border-radius: 7px;
+
+    font-size: 15px;
+}
+
+.admin-login-field input:focus {
+    outline: none;
+    border-color: #555;
+}
+
+.admin-login-button {
+    width: 100%;
+
+    margin-top: 5px;
+
+    padding: 15px;
+
+    border: none;
+    border-radius: 7px;
+
+    background: #111;
+    color: white;
+
+    font-size: 15px;
+    font-weight: 600;
+
+    cursor: pointer;
+}
+
+.admin-login-button:hover {
+    background: #333;
+}
+
+.admin-login-error {
+    margin-bottom: 20px;
+    padding: 12px;
+
+    background: #fff4f4;
+
+    border: 1px solid #ffd4d4;
+    border-radius: 6px;
+
+    color: #c33;
+
+    font-size: 13px;
+}
+
+.admin-login-home {
+    display: block;
+
+    margin-top: 20px;
+
+    text-align: center;
+    text-decoration: none;
+
+    color: #777;
+
+    font-size: 13px;
+}
