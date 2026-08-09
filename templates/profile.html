@@ -19,7 +19,13 @@
 
 </head>
 
+
 <body>
+
+
+<!-- ==================================================
+     상단 메뉴
+================================================== -->
 
 <header>
 
@@ -46,7 +52,15 @@
 </header>
 
 
+
+<!-- ==================================================
+     프로필
+================================================== -->
+
 <main class="profile-page">
+
+
+    <!-- 프로필 상단 -->
 
     <div class="profile-header">
 
@@ -66,6 +80,7 @@
 
         </div>
 
+
         <div class="profile-level">
             Lv. {{ user["level"] }}
         </div>
@@ -73,11 +88,77 @@
     </div>
 
 
+
+    <!-- ==================================================
+         출석체크
+    ================================================== -->
+
+    <section class="attendance-box">
+
+        <div class="attendance-info">
+
+            <h2>
+                오늘의 출석체크
+            </h2>
+
+            <p>
+                하루 한 번 출석하면
+                10P와 10EXP를 받을 수 있습니다.
+            </p>
+
+        </div>
+
+
+        {% if request.args.get("attendance_message") == "success" %}
+
+            <div class="attendance-success">
+                출석 완료! +10P / +10EXP
+            </div>
+
+
+        {% elif request.args.get("attendance_message") == "already" %}
+
+            <div class="attendance-already">
+                오늘은 이미 출석했습니다.
+            </div>
+
+
+        {% else %}
+
+            <form
+                method="POST"
+                action="{{ url_for('attendance') }}"
+            >
+
+                <button
+                    type="submit"
+                    class="attendance-button"
+                >
+                    출석체크
+                </button>
+
+            </form>
+
+        {% endif %}
+
+    </section>
+
+
+
+    <!-- ==================================================
+         포인트 / 경험치 / 연속출석
+    ================================================== -->
+
     <div class="profile-stats">
+
+
+        <!-- 포인트 -->
 
         <div class="profile-stat">
 
-            <span>포인트</span>
+            <span>
+                포인트
+            </span>
 
             <strong>
                 {{ "{:,}".format(user["point"]) }} P
@@ -86,9 +167,14 @@
         </div>
 
 
+
+        <!-- 경험치 -->
+
         <div class="profile-stat">
 
-            <span>경험치</span>
+            <span>
+                경험치
+            </span>
 
             <strong>
                 {{ "{:,}".format(user["exp"]) }} EXP
@@ -97,9 +183,14 @@
         </div>
 
 
+
+        <!-- 연속 출석 -->
+
         <div class="profile-stat">
 
-            <span>연속 출석</span>
+            <span>
+                연속 출석
+            </span>
 
             <strong>
                 {{ user["streak"] }}일
@@ -107,8 +198,14 @@
 
         </div>
 
+
     </div>
 
+
+
+    <!-- ==================================================
+         회원 정보
+    ================================================== -->
 
     <section class="profile-info-box">
 
@@ -117,9 +214,14 @@
         </h2>
 
 
+
+        <!-- 이름 -->
+
         <div class="profile-info-row">
 
-            <span>이름</span>
+            <span>
+                이름
+            </span>
 
             <strong>
                 {{ user["name"] }}
@@ -128,9 +230,14 @@
         </div>
 
 
+
+        <!-- 아이디 -->
+
         <div class="profile-info-row">
 
-            <span>아이디</span>
+            <span>
+                아이디
+            </span>
 
             <strong>
                 {{ user["username"] }}
@@ -139,9 +246,14 @@
         </div>
 
 
+
+        <!-- 전화번호 -->
+
         <div class="profile-info-row">
 
-            <span>전화번호</span>
+            <span>
+                전화번호
+            </span>
 
             <strong>
                 {{ user["phone"] or "-" }}
@@ -150,9 +262,14 @@
         </div>
 
 
+
+        <!-- 이메일 -->
+
         <div class="profile-info-row">
 
-            <span>이메일</span>
+            <span>
+                이메일
+            </span>
 
             <strong>
                 {{ user["email"] }}
@@ -161,9 +278,14 @@
         </div>
 
 
+
+        <!-- 마지막 출석 -->
+
         <div class="profile-info-row">
 
-            <span>마지막 출석</span>
+            <span>
+                마지막 출석
+            </span>
 
             <strong>
                 {{ user["last_attendance"] or "출석 기록 없음" }}
@@ -171,9 +293,13 @@
 
         </div>
 
+
     </section>
+
 
 </main>
 
+
 </body>
+
 </html>

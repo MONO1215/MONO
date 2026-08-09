@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, session
+from datetime import date, timedelta
 import os
 import psycopg
 from psycopg.rows import dict_row
@@ -641,6 +642,133 @@ def profile():
     return render_template(
         "profile.html",
         user=user
+    )
+
+# ==================================================
+# 출석체크
+# ==================================================
+
+@app.route("/attendance", methods=["POST"])
+def attendance():
+
+    if not session.get("user_logged_in"):
+        return redirect(
+            url_for("login")
+        )
+
+    user_id = session.get("user_id")
+    today = date.today()
+
+    conn = get_db_connection()
+
+    try:
+
+        with conn.cursor() as cur:
+
+            # 현재 회원 정보
+            cur.execute("""
+                SELECT
+                    point,
+                    exp,
+                    streak,
+                    last_attendance
+                FROM users
+                WHERE id = %s
+            """, (
+                user_id,
+            ))
+
+            user = cur.fetchone()
+
+            if user is None:
+                return redirect(
+                    url_for("login")
+                )
+
+
+            # 오늘 이미 출석했는지 확인
+            cur.execute("""
+                SELECT id
+                FROM attendance
+                WHERE user_id = %s
+                AND attendance_date = %s
+            """, (
+                user_id,
+                today
+            ))
+
+            already_attended = cur.fetchone()
+
+            if already_attended:
+
+                return redirect(
+                    url_for(
+                        "profile",
+                        attendance_message="already"
+                    )
+                )
+
+
+            # 연속 출석 계산
+            last_attendance = user["last_attendance"]
+
+            if last_attendance == today - timedelta(days=1):
+
+                new_streak = user["streak"] + 1
+
+            else:
+
+                new_streak = 1
+
+
+            # 출석 기록 저장
+            cur.execute("""
+                INSERT INTO attendance (
+                    user_id,
+                    attendance_date
+                )
+                VALUES (
+                    %s,
+                    %s
+                )
+            """, (
+                user_id,
+                today
+            ))
+
+
+            # 포인트 / 경험치 / 연속 출석 업데이트
+            cur.execute("""
+                UPDATE users
+                SET
+                    point = point + 10,
+                    exp = exp + 10,
+                    streak = %s,
+                    last_attendance = %s
+                WHERE id = %s
+            """, (
+                new_streak,
+                today,
+                user_id
+            ))
+
+        conn.commit()
+
+    except Exception:
+
+        conn.rollback()
+        raise
+
+    finally:
+
+        conn.close()
+
+
+    return redirect(
+        url_for(
+            "profile",
+            attendance_message="success"
+        )
     )
 
 # ==================================================
