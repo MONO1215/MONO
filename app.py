@@ -32,7 +32,6 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 IS_VERCEL = bool(os.environ.get("VERCEL"))
 
 if IS_VERCEL:
-    # Vercel은 로컬 파일 영구 저장용으로 사용할 수 없음
     UPLOAD_FOLDER = "/tmp/mono-products"
 else:
     UPLOAD_FOLDER = os.path.join(
@@ -98,21 +97,15 @@ def init_db():
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS products (
                     id SERIAL PRIMARY KEY,
-
                     name TEXT NOT NULL,
                     category TEXT NOT NULL,
-
                     image_url TEXT,
                     image_file TEXT,
-
                     description_html TEXT,
-
                     smartstore_price INTEGER,
                     smartstore_url TEXT,
-
                     coupang_price INTEGER,
                     coupang_url TEXT,
-
                     created_at TIMESTAMP
                         DEFAULT CURRENT_TIMESTAMP
                 )
@@ -121,14 +114,10 @@ def init_db():
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS product_options (
                     id SERIAL PRIMARY KEY,
-
                     product_id INTEGER NOT NULL,
-
                     option_name TEXT NOT NULL,
-
                     smartstore_price INTEGER,
                     smartstore_url TEXT,
-
                     coupang_price INTEGER,
                     coupang_url TEXT,
 
@@ -278,7 +267,6 @@ def product_detail(product_id):
 
         with conn.cursor() as cur:
 
-            # 상품
             cur.execute("""
                 SELECT *
                 FROM products
@@ -295,7 +283,6 @@ def product_detail(product_id):
                     404
                 )
 
-            # 옵션
             cur.execute("""
                 SELECT *
                 FROM product_options
@@ -361,10 +348,6 @@ def register():
             ""
         )
 
-        # ------------------------------------------
-        # 필수 입력 확인
-        # ------------------------------------------
-
         if not name:
             error = "이름을 입력해주세요."
 
@@ -381,10 +364,6 @@ def register():
             error = "비밀번호가 일치하지 않습니다."
 
 
-        # ------------------------------------------
-        # DB 저장
-        # ------------------------------------------
-
         if error is None:
 
             conn = get_db_connection()
@@ -393,7 +372,6 @@ def register():
 
                 with conn.cursor() as cur:
 
-                    # 아이디 중복 확인
                     cur.execute("""
                         SELECT id
                         FROM users
@@ -402,7 +380,9 @@ def register():
                         username,
                     ))
 
-                    existing_username = cur.fetchone()
+                    existing_username = (
+                        cur.fetchone()
+                    )
 
                     if existing_username:
 
@@ -412,7 +392,6 @@ def register():
 
                     else:
 
-                        # 이메일 중복 확인
                         cur.execute("""
                             SELECT id
                             FROM users
@@ -421,7 +400,9 @@ def register():
                             email,
                         ))
 
-                        existing_email = cur.fetchone()
+                        existing_email = (
+                            cur.fetchone()
+                        )
 
                         if existing_email:
 
@@ -522,7 +503,6 @@ def login():
                 user = cur.fetchone()
 
         finally:
-
             conn.close()
 
 
@@ -588,8 +568,8 @@ def logout():
 @app.route("/profile")
 def profile():
 
-    # 로그인하지 않은 사용자
     if not session.get("user_logged_in"):
+
         return redirect(
             url_for("login")
         )
@@ -627,12 +607,22 @@ def profile():
         conn.close()
 
 
-    # DB에서 회원을 찾지 못한 경우
     if user is None:
 
-        session.pop("user_logged_in", None)
-        session.pop("user_id", None)
-        session.pop("username", None)
+        session.pop(
+            "user_logged_in",
+            None
+        )
+
+        session.pop(
+            "user_id",
+            None
+        )
+
+        session.pop(
+            "username",
+            None
+        )
 
         return redirect(
             url_for("login")
@@ -643,6 +633,7 @@ def profile():
         "profile.html",
         user=user
     )
+
 
 # ==================================================
 # 내 정보 수정
@@ -655,18 +646,23 @@ def profile():
 def edit_profile():
 
     if not session.get("user_logged_in"):
+
         return redirect(
             url_for("login")
         )
 
     user_id = session.get("user_id")
+
     error = None
 
     conn = get_db_connection()
 
     try:
 
+        # ------------------------------------------
         # 현재 회원정보
+        # ------------------------------------------
+
         with conn.cursor() as cur:
 
             cur.execute("""
@@ -675,7 +671,8 @@ def edit_profile():
                     name,
                     username,
                     phone,
-                    email
+                    email,
+                    password_hash
                 FROM users
                 WHERE id = %s
             """, (
@@ -687,9 +684,20 @@ def edit_profile():
 
         if user is None:
 
-            session.pop("user_logged_in", None)
-            session.pop("user_id", None)
-            session.pop("username", None)
+            session.pop(
+                "user_logged_in",
+                None
+            )
+
+            session.pop(
+                "user_id",
+                None
+            )
+
+            session.pop(
+                "username",
+                None
+            )
 
             return redirect(
                 url_for("login")
@@ -717,19 +725,50 @@ def edit_profile():
                 ""
             ).strip()
 
+            current_password = request.form.get(
+                "current_password",
+                ""
+            )
+
+
+            # --------------------------------------
+            # 검증
+            # --------------------------------------
 
             if not name:
 
-                error = "이름을 입력해주세요."
+                error = (
+                    "이름을 입력해주세요."
+                )
 
             elif not email:
 
-                error = "이메일을 입력해주세요."
+                error = (
+                    "이메일을 입력해주세요."
+                )
 
+            elif not current_password:
+
+                error = (
+                    "현재 비밀번호를 입력해주세요."
+                )
+
+            elif not check_password_hash(
+                user["password_hash"],
+                current_password
+            ):
+
+                error = (
+                    "비밀번호가 올바르지 않습니다."
+                )
+
+
+            # --------------------------------------
+            # 이메일 중복
+            # --------------------------------------
 
             if error is None:
 
-                # 다른 회원이 같은 이메일을 쓰는지 확인
                 with conn.cursor() as cur:
 
                     cur.execute("""
@@ -742,36 +781,45 @@ def edit_profile():
                         user_id
                     ))
 
-                    existing_email = cur.fetchone()
+                    existing_email = (
+                        cur.fetchone()
+                    )
 
 
                 if existing_email:
 
-                    error = "이미 사용 중인 이메일입니다."
-
-                else:
-
-                    with conn.cursor() as cur:
-
-                        cur.execute("""
-                            UPDATE users
-                            SET
-                                name = %s,
-                                phone = %s,
-                                email = %s
-                            WHERE id = %s
-                        """, (
-                            name,
-                            phone,
-                            email,
-                            user_id
-                        ))
-
-                    conn.commit()
-
-                    return redirect(
-                        url_for("profile")
+                    error = (
+                        "이미 사용 중인 이메일입니다."
                     )
+
+
+            # --------------------------------------
+            # 정보 저장
+            # --------------------------------------
+
+            if error is None:
+
+                with conn.cursor() as cur:
+
+                    cur.execute("""
+                        UPDATE users
+                        SET
+                            name = %s,
+                            phone = %s,
+                            email = %s
+                        WHERE id = %s
+                    """, (
+                        name,
+                        phone,
+                        email,
+                        user_id
+                    ))
+
+                conn.commit()
+
+                return redirect(
+                    url_for("profile")
+                )
 
 
     except Exception:
@@ -790,19 +838,25 @@ def edit_profile():
         error=error
     )
 
+
 # ==================================================
 # 출석체크
 # ==================================================
 
-@app.route("/attendance", methods=["POST"])
+@app.route(
+    "/attendance",
+    methods=["POST"]
+)
 def attendance():
 
     if not session.get("user_logged_in"):
+
         return redirect(
             url_for("login")
         )
 
     user_id = session.get("user_id")
+
     today = date.today()
 
     conn = get_db_connection()
@@ -811,9 +865,9 @@ def attendance():
 
         with conn.cursor() as cur:
 
-            # 현재 회원 정보
             cur.execute("""
                 SELECT
+                    id,
                     point,
                     exp,
                     streak,
@@ -827,12 +881,12 @@ def attendance():
             user = cur.fetchone()
 
             if user is None:
+
                 return redirect(
                     url_for("login")
                 )
 
 
-            # 오늘 이미 출석했는지 확인
             cur.execute("""
                 SELECT id
                 FROM attendance
@@ -843,7 +897,10 @@ def attendance():
                 today
             ))
 
-            already_attended = cur.fetchone()
+            already_attended = (
+                cur.fetchone()
+            )
+
 
             if already_attended:
 
@@ -855,19 +912,25 @@ def attendance():
                 )
 
 
-            # 연속 출석 계산
-            last_attendance = user["last_attendance"]
+            last_attendance = (
+                user["last_attendance"]
+            )
 
-            if last_attendance == today - timedelta(days=1):
 
-                new_streak = user["streak"] + 1
+            if (
+                last_attendance
+                == today - timedelta(days=1)
+            ):
+
+                new_streak = (
+                    user["streak"] + 1
+                )
 
             else:
 
                 new_streak = 1
 
 
-            # 출석 기록 저장
             cur.execute("""
                 INSERT INTO attendance (
                     user_id,
@@ -883,7 +946,6 @@ def attendance():
             ))
 
 
-            # 포인트 / 경험치 / 연속 출석 업데이트
             cur.execute("""
                 UPDATE users
                 SET
@@ -917,16 +979,25 @@ def attendance():
         )
     )
 
+
 # ==================================================
 # 관리자 로그인 확인
 # ==================================================
 
-def admin_login_required(view_function):
+def admin_login_required(
+    view_function
+):
 
     @wraps(view_function)
-    def wrapped_view(*args, **kwargs):
+    def wrapped_view(
+        *args,
+        **kwargs
+    ):
 
-        if not session.get("admin_logged_in"):
+        if not session.get(
+            "admin_logged_in"
+        ):
+
             return redirect(
                 url_for("admin_login")
             )
@@ -977,29 +1048,43 @@ def admin_login():
                     username,
                 ))
 
-                admin_user = cur.fetchone()
+                admin_user = (
+                    cur.fetchone()
+                )
 
         finally:
             conn.close()
 
+
         if (
             admin_user
             and check_password_hash(
-                admin_user["password_hash"],
+                admin_user[
+                    "password_hash"
+                ],
                 password
             )
         ):
 
             session.clear()
 
-            session["admin_logged_in"] = True
-            session["admin_username"] = admin_user["username"]
+            session[
+                "admin_logged_in"
+            ] = True
+
+            session[
+                "admin_username"
+            ] = admin_user["username"]
 
             return redirect(
                 url_for("admin")
             )
 
-        error = "아이디 또는 비밀번호가 올바르지 않습니다."
+
+        error = (
+            "아이디 또는 비밀번호가 올바르지 않습니다."
+        )
+
 
     return render_template(
         "admin_login.html",
@@ -1020,6 +1105,7 @@ def admin_logout():
         url_for("admin_login")
     )
 
+
 # ==================================================
 # 관리자 상품 등록
 # ==================================================
@@ -1032,10 +1118,6 @@ def admin_logout():
 def admin():
 
     if request.method == "POST":
-
-        # ------------------------------------------
-        # 기본정보
-        # ------------------------------------------
 
         name = request.form.get(
             "name",
@@ -1078,10 +1160,6 @@ def admin():
         ).strip()
 
 
-        # ------------------------------------------
-        # 이미지 파일
-        # ------------------------------------------
-
         image_file_name = None
 
         image_file = request.files.get(
@@ -1093,7 +1171,6 @@ def admin():
             and image_file.filename
         ):
 
-            # Vercel에서는 로컬 파일 영구 저장 불가
             if IS_VERCEL:
 
                 return (
@@ -1109,17 +1186,15 @@ def admin():
 
             image_file.save(
                 os.path.join(
-                    app.config["UPLOAD_FOLDER"],
+                    app.config[
+                        "UPLOAD_FOLDER"
+                    ],
                     filename
                 )
             )
 
             image_file_name = filename
 
-
-        # ------------------------------------------
-        # 상품 설명 HTML 파일
-        # ------------------------------------------
 
         description_file = request.files.get(
             "description_file"
@@ -1136,10 +1211,6 @@ def admin():
                 .decode("utf-8")
             )
 
-
-        # ------------------------------------------
-        # 상품 DB 저장
-        # ------------------------------------------
 
         conn = get_db_connection()
 
@@ -1184,15 +1255,15 @@ def admin():
                     coupang_url
                 ))
 
-                product_id = cur.fetchone()["id"]
+                product_id = (
+                    cur.fetchone()["id"]
+                )
 
 
-            # --------------------------------------
-            # 옵션
-            # --------------------------------------
-
-            option_names = request.form.getlist(
-                "option_name[]"
+            option_names = (
+                request.form.getlist(
+                    "option_name[]"
+                )
             )
 
             option_smartstore_prices = (
@@ -1220,10 +1291,6 @@ def admin():
             )
 
 
-            # --------------------------------------
-            # 옵션 DB 저장
-            # --------------------------------------
-
             for (
                 option_name,
                 option_smart_price,
@@ -1244,6 +1311,7 @@ def admin():
 
                 if not option_name:
                     continue
+
 
                 with conn.cursor() as cur:
 
@@ -1288,6 +1356,7 @@ def admin():
 
             conn.close()
 
+
         return redirect(
             url_for("admin")
         )
@@ -1308,13 +1377,14 @@ def admin():
             products = cur.fetchall()
 
     finally:
-
         conn.close()
+
 
     return render_template(
         "admin.html",
         products=products
     )
+
 
 # ==================================================
 # 상품 수정
@@ -1331,22 +1401,24 @@ def edit_product(product_id):
 
     try:
 
-        # ------------------------------------------
-        # 현재 상품 불러오기
-        # ------------------------------------------
-
         with conn.cursor() as cur:
 
             cur.execute("""
                 SELECT *
                 FROM products
                 WHERE id = %s
-            """, (product_id,))
+            """, (
+                product_id,
+            ))
 
             product = cur.fetchone()
 
             if product is None:
-                return "상품을 찾을 수 없습니다.", 404
+
+                return (
+                    "상품을 찾을 수 없습니다.",
+                    404
+                )
 
 
             cur.execute("""
@@ -1354,14 +1426,12 @@ def edit_product(product_id):
                 FROM product_options
                 WHERE product_id = %s
                 ORDER BY id ASC
-            """, (product_id,))
+            """, (
+                product_id,
+            ))
 
             options = cur.fetchall()
 
-
-        # ------------------------------------------
-        # 수정 저장
-        # ------------------------------------------
 
         if request.method == "POST":
 
@@ -1406,12 +1476,10 @@ def edit_product(product_id):
             ).strip()
 
 
-            # --------------------------------------
-            # HTML 파일
-            # --------------------------------------
-
-            description_file = request.files.get(
-                "description_file"
+            description_file = (
+                request.files.get(
+                    "description_file"
+                )
             )
 
             if (
@@ -1426,14 +1494,14 @@ def edit_product(product_id):
                 )
 
 
-            # --------------------------------------
-            # 이미지 파일
-            # --------------------------------------
+            image_file_name = (
+                product["image_file"]
+            )
 
-            image_file_name = product["image_file"]
-
-            image_file = request.files.get(
-                "image_file"
+            image_file = (
+                request.files.get(
+                    "image_file"
+                )
             )
 
             if (
@@ -1456,17 +1524,15 @@ def edit_product(product_id):
 
                 image_file.save(
                     os.path.join(
-                        app.config["UPLOAD_FOLDER"],
+                        app.config[
+                            "UPLOAD_FOLDER"
+                        ],
                         filename
                     )
                 )
 
                 image_file_name = filename
 
-
-            # --------------------------------------
-            # 상품 수정
-            # --------------------------------------
 
             with conn.cursor() as cur:
 
@@ -1484,7 +1550,6 @@ def edit_product(product_id):
                         coupang_url = %s
                     WHERE id = %s
                 """, (
-
                     name,
                     category,
                     image_url,
@@ -1502,24 +1567,22 @@ def edit_product(product_id):
                     else None,
 
                     coupang_url,
-
                     product_id
                 ))
 
 
-                # 기존 옵션 전체 삭제
                 cur.execute("""
                     DELETE FROM product_options
                     WHERE product_id = %s
-                """, (product_id,))
+                """, (
+                    product_id,
+                ))
 
 
-            # --------------------------------------
-            # 수정된 옵션 다시 저장
-            # --------------------------------------
-
-            option_names = request.form.getlist(
-                "option_name[]"
+            option_names = (
+                request.form.getlist(
+                    "option_name[]"
+                )
             )
 
             option_smartstore_prices = (
@@ -1561,10 +1624,13 @@ def edit_product(product_id):
                 option_coupang_urls
             ):
 
-                option_name = option_name.strip()
+                option_name = (
+                    option_name.strip()
+                )
 
                 if not option_name:
                     continue
+
 
                 with conn.cursor() as cur:
 
@@ -1582,7 +1648,6 @@ def edit_product(product_id):
                             %s, %s, %s
                         )
                     """, (
-
                         product_id,
                         option_name,
 
@@ -1619,7 +1684,6 @@ def edit_product(product_id):
         conn.rollback()
         raise
 
-
     finally:
 
         conn.close()
@@ -1645,7 +1709,9 @@ def delete_product(product_id):
             cur.execute("""
                 DELETE FROM products
                 WHERE id = %s
-            """, (product_id,))
+            """, (
+                product_id,
+            ))
 
         conn.commit()
 
@@ -1657,6 +1723,7 @@ def delete_product(product_id):
     finally:
 
         conn.close()
+
 
     return redirect(
         url_for("admin")
