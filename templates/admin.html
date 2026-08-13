@@ -159,35 +159,55 @@
 
 
 
-                    <!-- 상품 이미지 -->
+                   <!-- 상품 이미지 -->
 
-                    <div class="form-group">
+<div class="form-group">
 
-                        <label>
-                            상품 이미지
-                        </label>
+    <label>
+        상품 이미지
+    </label>
 
-                        <p class="form-help">
-                            이미지 URL을 입력하거나 직접 파일을 업로드하세요.
-                        </p>
+    <p class="form-help">
+        이미지 URL을 입력하거나
+        이미지 파일을 직접 업로드하세요.
+    </p>
 
-                        <input
-                            type="url"
-                            name="image_url"
-                            placeholder="https://example.com/image.jpg"
-                        >
 
-                        <div class="or-text">
-                            또는
-                        </div>
+    <!-- 이미지 URL -->
 
-                        <input
-                            type="file"
-                            name="image_file"
-                            accept="image/*"
-                        >
+    <label>
+        이미지 URL
+    </label>
 
-                    </div>
+    <input
+        type="url"
+        name="image_url"
+        placeholder="https://example.com/image.jpg"
+    >
+
+
+    <div class="or-text">
+        또는
+    </div>
+
+
+    <!-- 이미지 파일 -->
+
+    <label>
+        이미지 파일 업로드
+    </label>
+
+    <input
+        type="file"
+        name="image_file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+    >
+
+    <p class="form-help">
+        이미지 파일을 선택하면 URL보다 파일 업로드가 우선 적용됩니다.
+    </p>
+
+</div>
 
 
 

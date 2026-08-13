@@ -1,3 +1,5 @@
+from supabase import create_client
+from uuid import uuid4
 from flask import (
     Flask,
     render_template,
@@ -41,6 +43,14 @@ app.secret_key = os.environ.get(
 # ==================================================
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get(
+    "SUPABASE_SERVICE_ROLE_KEY"
+)
+
+SUPABASE_BUCKET = "mono-products"
 
 IS_VERCEL = bool(
     os.environ.get("VERCEL")
@@ -116,6 +126,110 @@ def get_db_connection():
 
         prepare_threshold=None
     )
+
+# ==================================================
+# Supabase Storage 연결
+# ==================================================
+
+def get_supabase_client():
+
+    if not SUPABASE_URL:
+        raise RuntimeError(
+            "SUPABASE_URL 환경변수가 설정되어 있지 않습니다."
+        )
+
+    if not SUPABASE_SERVICE_ROLE_KEY:
+        raise RuntimeError(
+            "SUPABASE_SERVICE_ROLE_KEY 환경변수가 설정되어 있지 않습니다."
+        )
+
+    return create_client(
+        SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY
+    )
+
+
+# ==================================================
+# 상품 이미지 업로드
+# ==================================================
+
+def upload_product_image(
+    uploaded_file,
+    folder="product-images"
+):
+
+    if not uploaded_file:
+        return None
+
+    if not uploaded_file.filename:
+        return None
+
+    if not (
+        uploaded_file.mimetype
+        and uploaded_file.mimetype.startswith("image/")
+    ):
+        raise ValueError(
+            "이미지 파일만 업로드할 수 있습니다."
+        )
+
+    safe_name = secure_filename(
+        uploaded_file.filename
+    )
+
+    extension = os.path.splitext(
+        safe_name
+    )[1].lower()
+
+    if extension not in [
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".webp",
+        ".gif"
+    ]:
+        raise ValueError(
+            "JPG, JPEG, PNG, WEBP, GIF 이미지만 업로드할 수 있습니다."
+        )
+
+    filename = (
+        str(uuid4())
+        + extension
+    )
+
+    storage_path = (
+        folder
+        + "/"
+        + filename
+    )
+
+    file_data = (
+        uploaded_file.read()
+    )
+
+    supabase = (
+        get_supabase_client()
+    )
+
+    supabase.storage.from_(
+        SUPABASE_BUCKET
+    ).upload(
+        path=storage_path,
+        file=file_data,
+        file_options={
+            "content-type":
+                uploaded_file.mimetype
+        }
+    )
+
+    public_url = (
+        supabase.storage
+        .from_(SUPABASE_BUCKET)
+        .get_public_url(
+            storage_path
+        )
+    )
+
+    return public_url
 
 
 # ==================================================
@@ -1723,54 +1837,47 @@ def admin():
         # 대표 이미지
         # ------------------------------------------
 
-        image_file_name = None
+        # ------------------------------------------
+        # 대표 이미지
+        # URL 또는 파일 업로드
+        # ------------------------------------------
 
-
-        image_file = (
-            request.files.get(
-                "image_file"
-            )
+        image_file = request.files.get(
+            "image_file"
         )
-
 
         if (
             image_file
-            and
-            image_file.filename
+            and image_file.filename
         ):
 
+            try:
 
-            if IS_VERCEL:
+                uploaded_image_url = (
+                    upload_product_image(
+                        image_file,
+                        "product-images"
+                    )
+                )
 
+                # 파일이 선택되면 파일 업로드 URL을 우선 사용
+                image_url = uploaded_image_url
+
+            except ValueError as e:
+
+                return str(e), 400
+
+            except Exception as e:
 
                 return (
-                    "현재 Vercel에서는 대표 이미지 파일 "
-                    "업로드를 영구 저장할 수 없습니다. "
-                    "대표 이미지는 이미지 URL을 사용해주세요.",
-                    400
+                    "상품 이미지 업로드 중 오류가 발생했습니다: "
+                    + str(e),
+                    500
                 )
 
 
-            filename = (
-                secure_filename(
-                    image_file.filename
-                )
-            )
-
-
-            image_file.save(
-                os.path.join(
-                    app.config[
-                        "UPLOAD_FOLDER"
-                    ],
-                    filename
-                )
-            )
-
-
-            image_file_name = (
-                filename
-            )
+        # 로컬 파일명은 사용하지 않음
+        image_file_name = None
 
 
         # ------------------------------------------
@@ -2332,59 +2439,54 @@ def edit_product(
             # --------------------------------------
             # 대표 이미지
             # --------------------------------------
+            # --------------------------------------
+            # 대표 이미지 수정
+            # URL 또는 파일 업로드
+            # --------------------------------------
 
-            image_file_name = (
-                product[
-                    "image_file"
-                ]
+            image_file = request.files.get(
+                "image_file"
             )
 
-
-            image_file = (
-                request.files.get(
-                    "image_file"
-                )
-            )
+            # 기본값은 폼에 입력된 image_url 사용
+            # 빈 값이면 기존 상품 URL 유지
+            if not image_url:
+                image_url = product["image_url"]
 
 
+            # 새 이미지 파일이 선택된 경우
             if (
                 image_file
-                and
-                image_file.filename
+                and image_file.filename
             ):
 
+                try:
 
-                if IS_VERCEL:
+                    uploaded_image_url = (
+                        upload_product_image(
+                            image_file,
+                            "product-images"
+                        )
+                    )
 
+                    # 파일 업로드를 최우선으로 사용
+                    image_url = uploaded_image_url
+
+                except ValueError as e:
+
+                    return str(e), 400
+
+                except Exception as e:
 
                     return (
-                        "Vercel에서는 대표 이미지 파일을 "
-                        "영구 저장할 수 없습니다. "
-                        "대표 이미지는 이미지 URL을 사용해주세요.",
-                        400
+                        "상품 이미지 업로드 중 오류가 발생했습니다: "
+                        + str(e),
+                        500
                     )
 
 
-                filename = (
-                    secure_filename(
-                        image_file.filename
-                    )
-                )
-
-
-                image_file.save(
-                    os.path.join(
-                        app.config[
-                            "UPLOAD_FOLDER"
-                        ],
-                        filename
-                    )
-                )
-
-
-                image_file_name = (
-                    filename
-                )
+            # 로컬 이미지 파일명은 더 이상 사용하지 않음
+            image_file_name = None
 
 
             # --------------------------------------

@@ -1857,3 +1857,25 @@ nav a.active {
 
     border-radius: 8px;
 }
+
+/* ==================================================
+   상품 수정 - 현재 이미지 미리보기
+================================================== */
+
+.edit-current-image {
+    margin-bottom: 25px;
+}
+
+.edit-current-image-preview {
+    display: block;
+
+    width: 180px;
+    height: 180px;
+
+    object-fit: cover;
+
+    border: 1px solid #eeeeee;
+    border-radius: 8px;
+
+    background: #f7f7f7;
+}
