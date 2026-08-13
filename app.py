@@ -65,11 +65,8 @@ IS_VERCEL = bool(
 
 
 if IS_VERCEL:
-
     UPLOAD_FOLDER = "/tmp/mono-products"
-
 else:
-
     UPLOAD_FOLDER = os.path.join(
         "static",
         "uploads",
@@ -82,9 +79,7 @@ os.makedirs(
     exist_ok=True
 )
 
-app.config[
-    "UPLOAD_FOLDER"
-] = UPLOAD_FOLDER
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 
 # ==================================================
@@ -92,21 +87,13 @@ app.config[
 # ==================================================
 
 CATEGORIES = {
-
     "fashion": "패션의류/잡화",
-
     "food": "식품",
-
     "kitchen": "주방용품",
-
     "living": "생활용품",
-
     "hobby": "취미용품",
-
     "car": "자동차용품",
-
     "office": "사무용품",
-
     "sports": "스포츠용품"
 }
 
@@ -118,17 +105,13 @@ CATEGORIES = {
 def get_db_connection():
 
     if not DATABASE_URL:
-
         raise RuntimeError(
             "DATABASE_URL 환경변수가 설정되어 있지 않습니다."
         )
 
     return psycopg.connect(
-
         DATABASE_URL,
-
         row_factory=dict_row,
-
         prepare_threshold=None
     )
 
@@ -140,13 +123,11 @@ def get_db_connection():
 def get_supabase_client():
 
     if not SUPABASE_URL:
-
         raise RuntimeError(
             "SUPABASE_URL 환경변수가 설정되어 있지 않습니다."
         )
 
     if not SUPABASE_SERVICE_ROLE_KEY:
-
         raise RuntimeError(
             "SUPABASE_SERVICE_ROLE_KEY 환경변수가 설정되어 있지 않습니다."
         )
@@ -172,34 +153,24 @@ def upload_product_image(
     if not uploaded_file.filename:
         return None
 
-
     # 이미지 MIME 확인
-
     if not (
         uploaded_file.mimetype
-        and uploaded_file.mimetype.startswith(
-            "image/"
-        )
+        and uploaded_file.mimetype.startswith("image/")
     ):
-
         raise ValueError(
             "이미지 파일만 업로드할 수 있습니다."
         )
 
-
     # 안전한 파일명
-
     safe_name = secure_filename(
         uploaded_file.filename
     )
 
-
     # 확장자
-
     extension = os.path.splitext(
         safe_name
     )[1].lower()
-
 
     allowed_extensions = [
         ".jpg",
@@ -209,21 +180,16 @@ def upload_product_image(
         ".gif"
     ]
 
-
     if extension not in allowed_extensions:
-
         raise ValueError(
             "JPG, JPEG, PNG, WEBP, GIF 이미지만 업로드할 수 있습니다."
         )
 
-
-    # 랜덤 파일명 생성
-
+    # 랜덤 파일명
     filename = (
         str(uuid4())
         + extension
     )
-
 
     storage_path = (
         folder
@@ -231,60 +197,36 @@ def upload_product_image(
         + filename
     )
 
-
-    # --------------------------------------------------
-    # 중요:
-    # Werkzeug FileStorage를 직접 전달하지 않고
-    # 메모리 bytes로 읽어서 Supabase에 전달
-    # --------------------------------------------------
-
+    # 파일을 메모리 bytes로 읽기
     uploaded_file.stream.seek(0)
 
-    file_data = (
-        uploaded_file.stream.read()
-    )
-
+    file_data = uploaded_file.stream.read()
 
     if not file_data:
-
         raise ValueError(
             "업로드할 이미지 파일이 비어 있습니다."
         )
 
-
     supabase = get_supabase_client()
 
-
     # Supabase Storage 업로드
-
     supabase.storage.from_(
         SUPABASE_BUCKET
     ).upload(
-
         storage_path,
-
         file_data,
-
         {
-            "content-type":
-                uploaded_file.mimetype,
-
-            "upsert":
-                "false"
+            "content-type": uploaded_file.mimetype,
+            "upsert": "false"
         }
     )
 
-
-    # Public bucket 공개 URL
-
+    # 공개 URL
     public_url = (
         supabase.storage
         .from_(SUPABASE_BUCKET)
-        .get_public_url(
-            storage_path
-        )
+        .get_public_url(storage_path)
     )
-
 
     return public_url
 
@@ -301,46 +243,24 @@ def init_db():
 
         with conn.cursor() as cur:
 
-
-            # --------------------------------------
-            # 상품
-            # --------------------------------------
-
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS products (
-
                     id SERIAL PRIMARY KEY,
-
                     name TEXT NOT NULL,
-
                     category TEXT NOT NULL,
-
                     image_url TEXT,
-
                     image_file TEXT,
-
                     description_html TEXT,
-
                     description_image BYTEA,
-
                     description_image_mime TEXT,
-
                     smartstore_price INTEGER,
-
                     smartstore_url TEXT,
-
                     coupang_price INTEGER,
-
                     coupang_url TEXT,
-
                     created_at TIMESTAMP
                         DEFAULT CURRENT_TIMESTAMP
                 )
             """)
-
-
-            # 기존 products 테이블에도
-            # 설명 이미지 컬럼 자동 추가
 
             cur.execute("""
                 ALTER TABLE products
@@ -348,33 +268,20 @@ def init_db():
                 description_image BYTEA
             """)
 
-
             cur.execute("""
                 ALTER TABLE products
                 ADD COLUMN IF NOT EXISTS
                 description_image_mime TEXT
             """)
 
-
-            # --------------------------------------
-            # 옵션
-            # --------------------------------------
-
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS product_options (
-
                     id SERIAL PRIMARY KEY,
-
                     product_id INTEGER NOT NULL,
-
                     option_name TEXT NOT NULL,
-
                     smartstore_price INTEGER,
-
                     smartstore_url TEXT,
-
                     coupang_price INTEGER,
-
                     coupang_url TEXT,
 
                     FOREIGN KEY (product_id)
@@ -383,12 +290,9 @@ def init_db():
                 )
             """)
 
-
         conn.commit()
 
-
     finally:
-
         conn.close()
 
 
@@ -405,9 +309,7 @@ def ensure_database():
     global _db_initialized
 
     if not _db_initialized:
-
         init_db()
-
         _db_initialized = True
 
 
@@ -433,9 +335,7 @@ def home():
             products = cur.fetchall()
 
     finally:
-
         conn.close()
-
 
     return render_template(
         "index.html",
@@ -465,9 +365,7 @@ def all_products():
             products = cur.fetchall()
 
     finally:
-
         conn.close()
-
 
     return render_template(
         "index.html",
@@ -479,27 +377,19 @@ def all_products():
 # 카테고리
 # ==================================================
 
-@app.route(
-    "/category/<category_slug>"
-)
-def category_page(
-    category_slug
-):
+@app.route("/category/<category_slug>")
+def category_page(category_slug):
 
     category_name = CATEGORIES.get(
         category_slug
     )
 
-
     if not category_name:
-
         return redirect(
             url_for("home")
         )
 
-
     conn = get_db_connection()
-
 
     try:
 
@@ -517,18 +407,12 @@ def category_page(
             products = cur.fetchall()
 
     finally:
-
         conn.close()
 
-
     return render_template(
-
         "category.html",
-
         products=products,
-
         category_name=category_name,
-
         category_slug=category_slug
     )
 
@@ -537,15 +421,10 @@ def category_page(
 # 상품 상세
 # ==================================================
 
-@app.route(
-    "/product/<int:product_id>"
-)
-def product_detail(
-    product_id
-):
+@app.route("/product/<int:product_id>")
+def product_detail(product_id):
 
     conn = get_db_connection()
-
 
     try:
 
@@ -553,54 +432,38 @@ def product_detail(
 
             cur.execute("""
                 SELECT
-
                     id,
-
                     name,
-
                     category,
-
                     image_url,
-
                     image_file,
-
                     description_html,
 
                     CASE
                         WHEN description_image IS NOT NULL
                         THEN TRUE
                         ELSE FALSE
-                    END
-                    AS has_description_image,
+                    END AS has_description_image,
 
                     smartstore_price,
-
                     smartstore_url,
-
                     coupang_price,
-
                     coupang_url,
-
                     created_at
 
                 FROM products
-
                 WHERE id = %s
             """, (
                 product_id,
             ))
 
-
             product = cur.fetchone()
 
-
             if product is None:
-
                 return (
                     "상품을 찾을 수 없습니다.",
                     404
                 )
-
 
             cur.execute("""
                 SELECT *
@@ -611,21 +474,14 @@ def product_detail(
                 product_id,
             ))
 
-
             options = cur.fetchall()
 
-
     finally:
-
         conn.close()
 
-
     return render_template(
-
         "product_detail.html",
-
         product=product,
-
         options=options
     )
 
@@ -637,12 +493,9 @@ def product_detail(
 @app.route(
     "/product/<int:product_id>/description-image"
 )
-def product_description_image(
-    product_id
-):
+def product_description_image(product_id):
 
     conn = get_db_connection()
-
 
     try:
 
@@ -650,55 +503,36 @@ def product_description_image(
 
             cur.execute("""
                 SELECT
-
                     description_image,
-
                     description_image_mime
-
                 FROM products
-
                 WHERE id = %s
             """, (
                 product_id,
             ))
 
-
             product = cur.fetchone()
 
-
     finally:
-
         conn.close()
-
 
     if (
         product is None
-        or product[
-            "description_image"
-        ] is None
+        or product["description_image"] is None
     ):
-
         return (
             "상품 설명 이미지를 찾을 수 없습니다.",
             404
         )
 
-
     image_data = bytes(
-        product[
-            "description_image"
-        ]
+        product["description_image"]
     )
-
 
     image_mime = (
-        product[
-            "description_image_mime"
-        ]
-        or
-        "image/jpeg"
+        product["description_image_mime"]
+        or "image/jpeg"
     )
-
 
     return Response(
         image_data,
@@ -712,106 +546,66 @@ def product_description_image(
 
 @app.route(
     "/register",
-    methods=[
-        "GET",
-        "POST"
-    ]
+    methods=["GET", "POST"]
 )
 def register():
 
     error = None
 
-
     if request.method == "POST":
-
 
         name = request.form.get(
             "name",
             ""
         ).strip()
 
-
         username = request.form.get(
             "username",
             ""
         ).strip()
-
 
         phone = request.form.get(
             "phone",
             ""
         ).strip()
 
-
         email = request.form.get(
             "email",
             ""
         ).strip()
-
 
         password = request.form.get(
             "password",
             ""
         )
 
-
         password_confirm = request.form.get(
             "password_confirm",
             ""
         )
 
-
         if not name:
-
-            error = (
-                "이름을 입력해주세요."
-            )
-
+            error = "이름을 입력해주세요."
 
         elif not username:
-
-            error = (
-                "아이디를 입력해주세요."
-            )
-
+            error = "아이디를 입력해주세요."
 
         elif not email:
-
-            error = (
-                "이메일을 입력해주세요."
-            )
-
+            error = "이메일을 입력해주세요."
 
         elif not password:
+            error = "비밀번호를 입력해주세요."
 
-            error = (
-                "비밀번호를 입력해주세요."
-            )
-
-
-        elif (
-            password
-            !=
-            password_confirm
-        ):
-
-            error = (
-                "비밀번호가 일치하지 않습니다."
-            )
-
+        elif password != password_confirm:
+            error = "비밀번호가 일치하지 않습니다."
 
         if error is None:
 
-
             conn = get_db_connection()
-
 
             try:
 
                 with conn.cursor() as cur:
-
-
-                    # 아이디 중복
 
                     cur.execute("""
                         SELECT id
@@ -821,11 +615,7 @@ def register():
                         username,
                     ))
 
-
-                    existing_username = (
-                        cur.fetchone()
-                    )
-
+                    existing_username = cur.fetchone()
 
                     if existing_username:
 
@@ -833,11 +623,7 @@ def register():
                             "이미 사용 중인 아이디입니다."
                         )
 
-
                     else:
-
-
-                        # 이메일 중복
 
                         cur.execute("""
                             SELECT id
@@ -847,11 +633,7 @@ def register():
                             email,
                         ))
 
-
-                        existing_email = (
-                            cur.fetchone()
-                        )
-
+                        existing_email = cur.fetchone()
 
                         if existing_email:
 
@@ -859,9 +641,7 @@ def register():
                                 "이미 가입된 이메일입니다."
                             )
 
-
                         else:
-
 
                             password_hash = (
                                 generate_password_hash(
@@ -869,63 +649,38 @@ def register():
                                 )
                             )
 
-
                             cur.execute("""
                                 INSERT INTO users (
-
                                     name,
-
                                     username,
-
                                     phone,
-
                                     email,
-
                                     password_hash
-
                                 )
-
                                 VALUES (
-
                                     %s,
-
                                     %s,
-
                                     %s,
-
                                     %s,
-
                                     %s
-
                                 )
                             """, (
-
                                 name,
-
                                 username,
-
                                 phone,
-
                                 email,
-
                                 password_hash
                             ))
 
-
                             conn.commit()
-
 
             except Exception:
 
                 conn.rollback()
-
                 raise
 
-
             finally:
-
                 conn.close()
-
 
             if error is None:
 
@@ -933,11 +688,8 @@ def register():
                     url_for("login")
                 )
 
-
     return render_template(
-
         "register.html",
-
         error=error
     )
 
@@ -948,33 +700,25 @@ def register():
 
 @app.route(
     "/login",
-    methods=[
-        "GET",
-        "POST"
-    ]
+    methods=["GET", "POST"]
 )
 def login():
 
     error = None
 
-
     if request.method == "POST":
-
 
         username = request.form.get(
             "username",
             ""
         ).strip()
 
-
         password = request.form.get(
             "password",
             ""
         )
 
-
         conn = get_db_connection()
-
 
         try:
 
@@ -988,57 +732,33 @@ def login():
                     username,
                 ))
 
-
                 user = cur.fetchone()
 
-
         finally:
-
             conn.close()
-
 
         if (
             user
-            and
-            check_password_hash(
-                user[
-                    "password_hash"
-                ],
+            and check_password_hash(
+                user["password_hash"],
                 password
             )
         ):
 
-            session[
-                "user_logged_in"
-            ] = True
-
-
-            session[
-                "user_id"
-            ] = user["id"]
-
-
-            session[
-                "username"
-            ] = user[
-                "username"
-            ]
-
+            session["user_logged_in"] = True
+            session["user_id"] = user["id"]
+            session["username"] = user["username"]
 
             return redirect(
                 url_for("home")
             )
 
-
         error = (
             "아이디 또는 비밀번호가 올바르지 않습니다."
         )
 
-
     return render_template(
-
         "login.html",
-
         error=error
     )
 
@@ -1055,18 +775,15 @@ def logout():
         None
     )
 
-
     session.pop(
         "user_id",
         None
     )
 
-
     session.pop(
         "username",
         None
     )
-
 
     return redirect(
         url_for("home")
@@ -1083,19 +800,15 @@ def profile():
     if not session.get(
         "user_logged_in"
     ):
-
         return redirect(
             url_for("login")
         )
-
 
     user_id = session.get(
         "user_id"
     )
 
-
     conn = get_db_connection()
-
 
     try:
 
@@ -1103,44 +816,27 @@ def profile():
 
             cur.execute("""
                 SELECT
-
                     id,
-
                     name,
-
                     username,
-
                     phone,
-
                     email,
-
                     level,
-
                     point,
-
                     exp,
-
                     streak,
-
                     last_attendance,
-
                     created_at
-
                 FROM users
-
                 WHERE id = %s
             """, (
                 user_id,
             ))
 
-
             user = cur.fetchone()
 
-
     finally:
-
         conn.close()
-
 
     if user is None:
 
@@ -1149,28 +845,22 @@ def profile():
             None
         )
 
-
         session.pop(
             "user_id",
             None
         )
-
 
         session.pop(
             "username",
             None
         )
 
-
         return redirect(
             url_for("login")
         )
 
-
     return render_template(
-
         "profile.html",
-
         user=user
     )
 
@@ -1181,32 +871,24 @@ def profile():
 
 @app.route(
     "/profile/edit",
-    methods=[
-        "GET",
-        "POST"
-    ]
+    methods=["GET", "POST"]
 )
 def edit_profile():
 
     if not session.get(
         "user_logged_in"
     ):
-
         return redirect(
             url_for("login")
         )
-
 
     user_id = session.get(
         "user_id"
     )
 
-
     error = None
 
-
     conn = get_db_connection()
-
 
     try:
 
@@ -1214,29 +896,19 @@ def edit_profile():
 
             cur.execute("""
                 SELECT
-
                     id,
-
                     name,
-
                     username,
-
                     phone,
-
                     email,
-
                     password_hash
-
                 FROM users
-
                 WHERE id = %s
             """, (
                 user_id,
             ))
 
-
             user = cur.fetchone()
-
 
         if user is None:
 
@@ -1245,176 +917,115 @@ def edit_profile():
                 None
             )
 
-
             session.pop(
                 "user_id",
                 None
             )
-
 
             session.pop(
                 "username",
                 None
             )
 
-
             return redirect(
                 url_for("login")
             )
 
-
         if request.method == "POST":
-
 
             name = request.form.get(
                 "name",
                 ""
             ).strip()
 
-
             phone = request.form.get(
                 "phone",
                 ""
             ).strip()
-
 
             email = request.form.get(
                 "email",
                 ""
             ).strip()
 
-
-            current_password = (
-                request.form.get(
-                    "current_password",
-                    ""
-                )
+            current_password = request.form.get(
+                "current_password",
+                ""
             )
 
-
             if not name:
-
-                error = (
-                    "이름을 입력해주세요."
-                )
-
+                error = "이름을 입력해주세요."
 
             elif not email:
-
-                error = (
-                    "이메일을 입력해주세요."
-                )
-
+                error = "이메일을 입력해주세요."
 
             elif not current_password:
-
-                error = (
-                    "현재 비밀번호를 입력해주세요."
-                )
-
+                error = "현재 비밀번호를 입력해주세요."
 
             elif not check_password_hash(
-
-                user[
-                    "password_hash"
-                ],
-
+                user["password_hash"],
                 current_password
             ):
-
                 error = (
                     "비밀번호가 올바르지 않습니다."
                 )
 
-
             if error is None:
-
 
                 with conn.cursor() as cur:
 
                     cur.execute("""
                         SELECT id
-
                         FROM users
-
                         WHERE email = %s
-
                         AND id != %s
                     """, (
-
                         email,
-
                         user_id
                     ))
 
-
-                    existing_email = (
-                        cur.fetchone()
-                    )
-
+                    existing_email = cur.fetchone()
 
                 if existing_email:
-
                     error = (
                         "이미 사용 중인 이메일입니다."
                     )
 
-
             if error is None:
-
 
                 with conn.cursor() as cur:
 
                     cur.execute("""
                         UPDATE users
-
                         SET
-
                             name = %s,
-
                             phone = %s,
-
                             email = %s
-
                         WHERE id = %s
                     """, (
-
                         name,
-
                         phone,
-
                         email,
-
                         user_id
                     ))
 
-
                 conn.commit()
-
 
                 return redirect(
                     url_for("profile")
                 )
 
-
     except Exception:
 
         conn.rollback()
-
         raise
 
-
     finally:
-
         conn.close()
 
-
     return render_template(
-
         "edit_profile.html",
-
         user=user,
-
         error=error
     )
 
@@ -1432,22 +1043,17 @@ def attendance():
     if not session.get(
         "user_logged_in"
     ):
-
         return redirect(
             url_for("login")
         )
-
 
     user_id = session.get(
         "user_id"
     )
 
-
     today = date.today()
 
-
     conn = get_db_connection()
-
 
     try:
 
@@ -1455,27 +1061,18 @@ def attendance():
 
             cur.execute("""
                 SELECT
-
                     id,
-
                     point,
-
                     exp,
-
                     streak,
-
                     last_attendance
-
                 FROM users
-
                 WHERE id = %s
             """, (
                 user_id,
             ))
 
-
             user = cur.fetchone()
-
 
             if user is None:
 
@@ -1483,27 +1080,17 @@ def attendance():
                     url_for("login")
                 )
 
-
             cur.execute("""
                 SELECT id
-
                 FROM attendance
-
                 WHERE user_id = %s
-
                 AND attendance_date = %s
             """, (
-
                 user_id,
-
                 today
             ))
 
-
-            already_attended = (
-                cur.fetchone()
-            )
-
+            already_attended = cur.fetchone()
 
             if already_attended:
 
@@ -1514,98 +1101,58 @@ def attendance():
                     )
                 )
 
-
             last_attendance = (
-                user[
-                    "last_attendance"
-                ]
+                user["last_attendance"]
             )
-
 
             if (
                 last_attendance
-                ==
-                today
-                -
-                timedelta(days=1)
+                == today - timedelta(days=1)
             ):
-
                 new_streak = (
-                    user[
-                        "streak"
-                    ]
-                    +
-                    1
+                    user["streak"] + 1
                 )
 
-
             else:
-
                 new_streak = 1
-
 
             cur.execute("""
                 INSERT INTO attendance (
-
                     user_id,
-
                     attendance_date
-
                 )
-
                 VALUES (
-
                     %s,
-
                     %s
-
                 )
             """, (
-
                 user_id,
-
                 today
             ))
 
-
             cur.execute("""
                 UPDATE users
-
                 SET
-
                     point = point + 10,
-
                     exp = exp + 10,
-
                     streak = %s,
-
                     last_attendance = %s
-
                 WHERE id = %s
             """, (
-
                 new_streak,
-
                 today,
-
                 user_id
             ))
 
-
         conn.commit()
-
 
     except Exception:
 
         conn.rollback()
-
         raise
 
-
     finally:
-
         conn.close()
-
 
     return redirect(
         url_for(
@@ -1632,19 +1179,16 @@ def admin_login_required(
         if not session.get(
             "admin_logged_in"
         ):
-
             return redirect(
                 url_for(
                     "admin_login"
                 )
             )
 
-
         return view_function(
             *args,
             **kwargs
         )
-
 
     return wrapped_view
 
@@ -1655,33 +1199,25 @@ def admin_login_required(
 
 @app.route(
     "/admin/login",
-    methods=[
-        "GET",
-        "POST"
-    ]
+    methods=["GET", "POST"]
 )
 def admin_login():
 
     error = None
 
-
     if request.method == "POST":
-
 
         username = request.form.get(
             "username",
             ""
         ).strip()
 
-
         password = request.form.get(
             "password",
             ""
         )
 
-
         conn = get_db_connection()
-
 
         try:
 
@@ -1695,59 +1231,36 @@ def admin_login():
                     username,
                 ))
 
-
-                admin_user = (
-                    cur.fetchone()
-                )
-
+                admin_user = cur.fetchone()
 
         finally:
-
             conn.close()
-
 
         if (
             admin_user
-            and
-            check_password_hash(
-
-                admin_user[
-                    "password_hash"
-                ],
-
+            and check_password_hash(
+                admin_user["password_hash"],
                 password
             )
         ):
 
             session.clear()
 
-
-            session[
-                "admin_logged_in"
-            ] = True
-
-
-            session[
-                "admin_username"
-            ] = admin_user[
-                "username"
-            ]
-
+            session["admin_logged_in"] = True
+            session["admin_username"] = (
+                admin_user["username"]
+            )
 
             return redirect(
                 url_for("admin")
             )
 
-
         error = (
             "아이디 또는 비밀번호가 올바르지 않습니다."
         )
 
-
     return render_template(
-
         "admin_login.html",
-
         error=error
     )
 
@@ -1756,18 +1269,13 @@ def admin_login():
 # 관리자 로그아웃
 # ==================================================
 
-@app.route(
-    "/admin/logout"
-)
+@app.route("/admin/logout")
 def admin_logout():
 
     session.clear()
 
-
     return redirect(
-        url_for(
-            "admin_login"
-        )
+        url_for("admin_login")
     )
 
 
@@ -1777,16 +1285,12 @@ def admin_logout():
 
 @app.route(
     "/admin",
-    methods=[
-        "GET",
-        "POST"
-    ]
+    methods=["GET", "POST"]
 )
 @admin_login_required
 def admin():
 
     if request.method == "POST":
-
 
         # ------------------------------------------
         # 기본정보
@@ -1797,68 +1301,50 @@ def admin():
             ""
         ).strip()
 
-
         category = request.form.get(
             "category",
             ""
         ).strip()
-
 
         image_url = request.form.get(
             "image_url",
             ""
         ).strip()
 
-
-        description_html = (
-            request.form.get(
-                "description_html",
-                ""
-            )
+        description_html = request.form.get(
+            "description_html",
+            ""
         )
 
-
-        smartstore_price = (
-            request.form.get(
-                "smartstore_price",
-                ""
-            )
+        smartstore_price = request.form.get(
+            "smartstore_price",
+            ""
         )
 
+        smartstore_url = request.form.get(
+            "smartstore_url",
+            ""
+        ).strip()
 
-        smartstore_url = (
-            request.form.get(
-                "smartstore_url",
-                ""
-            ).strip()
+        coupang_price = request.form.get(
+            "coupang_price",
+            ""
         )
 
-
-        coupang_price = (
-            request.form.get(
-                "coupang_price",
-                ""
-            )
-        )
-
-
-        coupang_url = (
-            request.form.get(
-                "coupang_url",
-                ""
-            ).strip()
-        )
+        coupang_url = request.form.get(
+            "coupang_url",
+            ""
+        ).strip()
 
 
         # ------------------------------------------
         # 대표 이미지
-        # URL 또는 파일 업로드
+        # URL 또는 Supabase 파일 업로드
         # ------------------------------------------
 
         image_file = request.files.get(
             "image_file"
         )
-
 
         if (
             image_file
@@ -1874,86 +1360,82 @@ def admin():
                     )
                 )
 
-
-                # 파일 선택 시 URL보다 우선
-
-                image_url = (
-                    uploaded_image_url
-                )
-
+                # 파일을 선택한 경우 업로드된 이미지 우선
+                image_url = uploaded_image_url
 
             except ValueError as e:
 
-                return str(e), 400
-
+                return (
+                    str(e),
+                    400
+                )
 
             except Exception as e:
 
-    traceback.print_exc()
+                traceback.print_exc()
 
-    return (
-        "상품 이미지 업로드 중 오류가 발생했습니다: "
-        + str(e),
-        500
-    )
+                return (
+                    "상품 이미지 업로드 중 오류가 발생했습니다: "
+                    + str(e),
+                    500
+                )
 
 
-        # 로컬 파일명은 사용하지 않음
-
+        # 로컬 파일 저장은 사용하지 않음
         image_file_name = None
 
 
         # ------------------------------------------
-        # 상품 설명 이미지
+        # 상품 설명
+        # HTML 또는 이미지
         # ------------------------------------------
 
         description_image_data = None
-
         description_image_mime = None
 
-
-        description_image = (
-            request.files.get(
-                "description_image"
-            )
+        description_file = request.files.get(
+            "description_file"
         )
 
-
         if (
-            description_image
-            and
-            description_image.filename
+            description_file
+            and description_file.filename
         ):
 
-
-            if not (
-                description_image.mimetype
-                and
-                description_image.mimetype.startswith(
+            if (
+                description_file.mimetype
+                and description_file.mimetype.startswith(
                     "image/"
                 )
             ):
 
-                return (
-                    "상품 설명 파일은 이미지 형식만 가능합니다.",
-                    400
+                description_image_data = (
+                    description_file.read()
                 )
 
+                description_image_mime = (
+                    description_file.mimetype
+                )
 
-            description_image_data = (
-                description_image.read()
-            )
+                # 이미지가 선택되면 HTML은 비움
+                description_html = ""
 
+            else:
 
-            description_image_mime = (
-                description_image.mimetype
-            )
+                try:
 
+                    description_html = (
+                        description_file
+                        .read()
+                        .decode("utf-8")
+                    )
 
-            # 이미지가 선택된 경우
-            # HTML 설명은 사용하지 않음
+                except UnicodeDecodeError:
 
-            description_html = None
+                    return (
+                        "상품 설명 파일은 HTML 또는 이미지 파일만 사용할 수 있습니다.",
+                        400
+                    )
 
 
         # ------------------------------------------
@@ -1962,103 +1444,62 @@ def admin():
 
         conn = get_db_connection()
 
-
         try:
 
             with conn.cursor() as cur:
 
                 cur.execute("""
                     INSERT INTO products (
-
                         name,
-
                         category,
-
                         image_url,
-
                         image_file,
-
                         description_html,
-
                         description_image,
-
                         description_image_mime,
-
                         smartstore_price,
-
                         smartstore_url,
-
                         coupang_price,
-
                         coupang_url
-
                     )
-
                     VALUES (
-
                         %s,
-
                         %s,
-
                         %s,
-
                         %s,
-
                         %s,
-
                         %s,
-
                         %s,
-
                         %s,
-
                         %s,
-
                         %s,
-
                         %s
-
                     )
-
                     RETURNING id
                 """, (
-
                     name,
-
                     category,
-
                     image_url,
-
                     image_file_name,
-
                     description_html,
-
                     description_image_data,
-
                     description_image_mime,
 
-                    int(
-                        smartstore_price
-                    )
+                    int(smartstore_price)
                     if smartstore_price
                     else None,
 
                     smartstore_url,
 
-                    int(
-                        coupang_price
-                    )
+                    int(coupang_price)
                     if coupang_price
                     else None,
 
                     coupang_url
                 ))
 
-
                 product_id = (
-                    cur.fetchone()[
-                        "id"
-                    ]
+                    cur.fetchone()["id"]
                 )
 
 
@@ -2072,13 +1513,11 @@ def admin():
                 )
             )
 
-
             option_smartstore_prices = (
                 request.form.getlist(
                     "option_smartstore_price[]"
                 )
             )
-
 
             option_smartstore_urls = (
                 request.form.getlist(
@@ -2086,13 +1525,11 @@ def admin():
                 )
             )
 
-
             option_coupang_prices = (
                 request.form.getlist(
                     "option_coupang_price[]"
                 )
             )
-
 
             option_coupang_urls = (
                 request.form.getlist(
@@ -2108,96 +1545,62 @@ def admin():
                 option_coupang_price,
                 option_coupang_url
             ) in zip(
-
                 option_names,
-
                 option_smartstore_prices,
-
                 option_smartstore_urls,
-
                 option_coupang_prices,
-
                 option_coupang_urls
             ):
-
 
                 option_name = (
                     option_name.strip()
                 )
 
-
                 if not option_name:
-
                     continue
-
 
                 with conn.cursor() as cur:
 
                     cur.execute("""
                         INSERT INTO product_options (
-
                             product_id,
-
                             option_name,
-
                             smartstore_price,
-
                             smartstore_url,
-
                             coupang_price,
-
                             coupang_url
-
                         )
-
                         VALUES (
-
                             %s,
-
                             %s,
-
                             %s,
-
                             %s,
-
                             %s,
-
                             %s
-
                         )
                     """, (
-
                         product_id,
-
                         option_name,
 
-                        int(
-                            option_smart_price
-                        )
+                        int(option_smart_price)
                         if option_smart_price
                         else None,
 
                         option_smart_url.strip(),
 
-                        int(
-                            option_coupang_price
-                        )
+                        int(option_coupang_price)
                         if option_coupang_price
                         else None,
 
                         option_coupang_url.strip()
                     ))
 
-
             conn.commit()
-
 
         except Exception:
 
             conn.rollback()
-
             raise
-
 
         finally:
 
@@ -2210,11 +1613,10 @@ def admin():
 
 
     # ----------------------------------------------
-    # 관리자 상품 목록
+    # 관리자 페이지 상품 목록
     # ----------------------------------------------
 
     conn = get_db_connection()
-
 
     try:
 
@@ -2222,46 +1624,30 @@ def admin():
 
             cur.execute("""
                 SELECT
-
                     id,
-
                     name,
-
                     category,
-
                     image_url,
-
                     image_file,
-
                     description_html,
 
                     CASE
                         WHEN description_image IS NOT NULL
                         THEN TRUE
                         ELSE FALSE
-                    END
-                    AS has_description_image,
+                    END AS has_description_image,
 
                     smartstore_price,
-
                     smartstore_url,
-
                     coupang_price,
-
                     coupang_url,
-
                     created_at
 
                 FROM products
-
                 ORDER BY id DESC
             """)
 
-
-            products = (
-                cur.fetchall()
-            )
-
+            products = cur.fetchall()
 
     finally:
 
@@ -2269,85 +1655,61 @@ def admin():
 
 
     return render_template(
-
         "admin.html",
-
         products=products
     )
 
 
 # ==================================================
-# 관리자 상품 수정
+# 상품 수정
 # ==================================================
 
 @app.route(
     "/admin/product/<int:product_id>/edit",
-    methods=[
-        "GET",
-        "POST"
-    ]
+    methods=["GET", "POST"]
 )
 @admin_login_required
-def edit_product(
-    product_id
-):
+def edit_product(product_id):
 
     conn = get_db_connection()
 
-
     try:
 
-
         # ------------------------------------------
-        # 상품 조회
+        # 현재 상품
         # ------------------------------------------
 
         with conn.cursor() as cur:
 
             cur.execute("""
                 SELECT
-
                     id,
-
                     name,
-
                     category,
-
                     image_url,
-
                     image_file,
-
                     description_html,
 
                     CASE
                         WHEN description_image IS NOT NULL
                         THEN TRUE
                         ELSE FALSE
-                    END
-                    AS has_description_image,
+                    END AS has_description_image,
 
+                    description_image_mime,
                     smartstore_price,
-
                     smartstore_url,
-
                     coupang_price,
-
                     coupang_url,
-
                     created_at
 
                 FROM products
-
                 WHERE id = %s
             """, (
                 product_id,
             ))
 
-
-            product = (
-                cur.fetchone()
-            )
-
+            product = cur.fetchone()
 
             if product is None:
 
@@ -2366,10 +1728,7 @@ def edit_product(
                 product_id,
             ))
 
-
-            options = (
-                cur.fetchall()
-            )
+            options = cur.fetchall()
 
 
         # ------------------------------------------
@@ -2378,94 +1737,65 @@ def edit_product(
 
         if request.method == "POST":
 
+            name = request.form.get(
+                "name",
+                ""
+            ).strip()
 
-            name = (
-                request.form.get(
-                    "name",
-                    ""
-                ).strip()
+            category = request.form.get(
+                "category",
+                ""
+            ).strip()
+
+            image_url = request.form.get(
+                "image_url",
+                ""
+            ).strip()
+
+            description_html = request.form.get(
+                "description_html",
+                ""
             )
 
-
-            category = (
-                request.form.get(
-                    "category",
-                    ""
-                ).strip()
+            smartstore_price = request.form.get(
+                "smartstore_price",
+                ""
             )
 
+            smartstore_url = request.form.get(
+                "smartstore_url",
+                ""
+            ).strip()
 
-            image_url = (
-                request.form.get(
-                    "image_url",
-                    ""
-                ).strip()
+            coupang_price = request.form.get(
+                "coupang_price",
+                ""
             )
 
-
-            description_html = (
-                request.form.get(
-                    "description_html",
-                    ""
-                )
-            )
-
-
-            smartstore_price = (
-                request.form.get(
-                    "smartstore_price",
-                    ""
-                )
-            )
-
-
-            smartstore_url = (
-                request.form.get(
-                    "smartstore_url",
-                    ""
-                ).strip()
-            )
-
-
-            coupang_price = (
-                request.form.get(
-                    "coupang_price",
-                    ""
-                )
-            )
-
-
-            coupang_url = (
-                request.form.get(
-                    "coupang_url",
-                    ""
-                ).strip()
-            )
+            coupang_url = request.form.get(
+                "coupang_url",
+                ""
+            ).strip()
 
 
             # --------------------------------------
             # 대표 이미지 수정
-            # URL 또는 파일 업로드
             # --------------------------------------
 
             image_file = request.files.get(
                 "image_file"
             )
 
-
-            # URL이 비어 있으면 기존 URL 유지
-
+            # URL 입력을 비워두었다면
+            # 기존 이미지 유지
             if not image_url:
-
-                image_url = (
-                    product[
-                        "image_url"
-                    ]
-                )
+                image_url = product[
+                    "image_url"
+                ]
 
 
-            # 새 파일 선택
-
+            # 새 이미지 파일을 선택했다면
+            # Supabase에 업로드하고 새 URL 사용
             if (
                 image_file
                 and image_file.filename
@@ -2480,206 +1810,176 @@ def edit_product(
                         )
                     )
 
-
                     image_url = (
                         uploaded_image_url
                     )
 
-
                 except ValueError as e:
 
-                    return str(e), 400
-
+                    return (
+                        str(e),
+                        400
+                    )
 
                 except Exception as e:
 
-    traceback.print_exc()
+                    traceback.print_exc()
 
-    return (
-        "상품 이미지 업로드 중 오류가 발생했습니다: "
-        + str(e),
-        500
-    )
+                    return (
+                        "상품 이미지 업로드 중 오류가 발생했습니다: "
+                        + str(e),
+                        500
+                    )
 
 
-            # 로컬 이미지 파일명 미사용
-
+            # 로컬 파일 저장은 사용하지 않음
             image_file_name = None
 
 
             # --------------------------------------
-            # 기존 설명 이미지
+            # 상품 설명 수정
             # --------------------------------------
 
-            with conn.cursor() as cur:
-
-                cur.execute("""
-                    SELECT
-
-                        description_image,
-
-                        description_image_mime
-
-                    FROM products
-
-                    WHERE id = %s
-                """, (
-                    product_id,
-                ))
-
-
-                current_description = (
-                    cur.fetchone()
-                )
-
-
-            description_image_data = (
-                current_description[
-                    "description_image"
-                ]
-            )
-
-
-            description_image_mime = (
-                current_description[
-                    "description_image_mime"
-                ]
-            )
-
-
-            # --------------------------------------
-            # 새 설명 이미지
-            # --------------------------------------
-
-            new_description_image = (
+            description_file = (
                 request.files.get(
-                    "description_image"
+                    "description_file"
                 )
             )
+
+            new_description_image = None
+            new_description_mime = None
+
+            use_new_description_image = False
 
 
             if (
-                new_description_image
-                and
-                new_description_image.filename
+                description_file
+                and description_file.filename
             ):
 
-
-                if not (
-                    new_description_image.mimetype
-                    and
-                    new_description_image.mimetype.startswith(
+                if (
+                    description_file.mimetype
+                    and description_file.mimetype.startswith(
                         "image/"
                     )
                 ):
 
-                    return (
-                        "상품 설명 파일은 이미지 형식만 가능합니다.",
-                        400
+                    new_description_image = (
+                        description_file.read()
                     )
 
+                    new_description_mime = (
+                        description_file.mimetype
+                    )
 
-                description_image_data = (
-                    new_description_image.read()
-                )
+                    use_new_description_image = True
 
+                    # 새 설명 이미지가 있으면
+                    # HTML 설명 제거
+                    description_html = ""
 
-                description_image_mime = (
-                    new_description_image.mimetype
-                )
+                else:
 
+                    try:
 
-                # 이미지 선택 시 HTML 제거
+                        description_html = (
+                            description_file
+                            .read()
+                            .decode("utf-8")
+                        )
 
-                description_html = None
+                    except UnicodeDecodeError:
 
-
-            elif (
-                description_html
-                and
-                description_html.strip()
-            ):
-
-
-                # HTML 입력 시 기존 상세 이미지 제거
-
-                description_image_data = None
-
-                description_image_mime = None
+                        return (
+                            "상품 설명 파일은 HTML 또는 이미지 파일만 사용할 수 있습니다.",
+                            400
+                        )
 
 
             # --------------------------------------
-            # 상품 UPDATE
+            # 상품 정보 UPDATE
             # --------------------------------------
 
             with conn.cursor() as cur:
 
-                cur.execute("""
-                    UPDATE products
+                if use_new_description_image:
 
-                    SET
+                    cur.execute("""
+                        UPDATE products
+                        SET
+                            name = %s,
+                            category = %s,
+                            image_url = %s,
+                            image_file = %s,
+                            description_html = %s,
+                            description_image = %s,
+                            description_image_mime = %s,
+                            smartstore_price = %s,
+                            smartstore_url = %s,
+                            coupang_price = %s,
+                            coupang_url = %s
+                        WHERE id = %s
+                    """, (
+                        name,
+                        category,
+                        image_url,
+                        image_file_name,
+                        description_html,
+                        new_description_image,
+                        new_description_mime,
 
-                        name = %s,
+                        int(smartstore_price)
+                        if smartstore_price
+                        else None,
 
-                        category = %s,
+                        smartstore_url,
 
-                        image_url = %s,
+                        int(coupang_price)
+                        if coupang_price
+                        else None,
 
-                        image_file = %s,
+                        coupang_url,
+                        product_id
+                    ))
 
-                        description_html = %s,
+                else:
 
-                        description_image = %s,
+                    cur.execute("""
+                        UPDATE products
+                        SET
+                            name = %s,
+                            category = %s,
+                            image_url = %s,
+                            image_file = %s,
+                            description_html = %s,
+                            smartstore_price = %s,
+                            smartstore_url = %s,
+                            coupang_price = %s,
+                            coupang_url = %s
+                        WHERE id = %s
+                    """, (
+                        name,
+                        category,
+                        image_url,
+                        image_file_name,
+                        description_html,
 
-                        description_image_mime = %s,
+                        int(smartstore_price)
+                        if smartstore_price
+                        else None,
 
-                        smartstore_price = %s,
+                        smartstore_url,
 
-                        smartstore_url = %s,
+                        int(coupang_price)
+                        if coupang_price
+                        else None,
 
-                        coupang_price = %s,
-
-                        coupang_url = %s
-
-                    WHERE id = %s
-                """, (
-
-                    name,
-
-                    category,
-
-                    image_url,
-
-                    image_file_name,
-
-                    description_html,
-
-                    description_image_data,
-
-                    description_image_mime,
-
-                    int(
-                        smartstore_price
-                    )
-                    if smartstore_price
-                    else None,
-
-                    smartstore_url,
-
-                    int(
-                        coupang_price
-                    )
-                    if coupang_price
-                    else None,
-
-                    coupang_url,
-
-                    product_id
-                ))
+                        coupang_url,
+                        product_id
+                    ))
 
 
                 # 기존 옵션 삭제
-
                 cur.execute("""
                     DELETE FROM product_options
                     WHERE product_id = %s
@@ -2698,13 +1998,11 @@ def edit_product(
                 )
             )
 
-
             option_smartstore_prices = (
                 request.form.getlist(
                     "option_smartstore_price[]"
                 )
             )
-
 
             option_smartstore_urls = (
                 request.form.getlist(
@@ -2712,13 +2010,11 @@ def edit_product(
                 )
             )
 
-
             option_coupang_prices = (
                 request.form.getlist(
                     "option_coupang_price[]"
                 )
             )
-
 
             option_coupang_urls = (
                 request.form.getlist(
@@ -2734,26 +2030,18 @@ def edit_product(
                 cp_price,
                 cp_url
             ) in zip(
-
                 option_names,
-
                 option_smartstore_prices,
-
                 option_smartstore_urls,
-
                 option_coupang_prices,
-
                 option_coupang_urls
             ):
-
 
                 option_name = (
                     option_name.strip()
                 )
 
-
                 if not option_name:
-
                     continue
 
 
@@ -2761,53 +2049,32 @@ def edit_product(
 
                     cur.execute("""
                         INSERT INTO product_options (
-
                             product_id,
-
                             option_name,
-
                             smartstore_price,
-
                             smartstore_url,
-
                             coupang_price,
-
                             coupang_url
-
                         )
-
                         VALUES (
-
                             %s,
-
                             %s,
-
                             %s,
-
                             %s,
-
                             %s,
-
                             %s
-
                         )
                     """, (
-
                         product_id,
-
                         option_name,
 
-                        int(
-                            smart_price
-                        )
+                        int(smart_price)
                         if smart_price
                         else None,
 
                         smart_url.strip(),
 
-                        int(
-                            cp_price
-                        )
+                        int(cp_price)
                         if cp_price
                         else None,
 
@@ -2817,18 +2084,14 @@ def edit_product(
 
             conn.commit()
 
-
             return redirect(
                 url_for("admin")
             )
 
 
         return render_template(
-
             "edit_product.html",
-
             product=product,
-
             options=options
         )
 
@@ -2836,9 +2099,7 @@ def edit_product(
     except Exception:
 
         conn.rollback()
-
         raise
-
 
     finally:
 
@@ -2854,12 +2115,9 @@ def edit_product(
     methods=["POST"]
 )
 @admin_login_required
-def delete_product(
-    product_id
-):
+def delete_product(product_id):
 
     conn = get_db_connection()
-
 
     try:
 
@@ -2872,16 +2130,12 @@ def delete_product(
                 product_id,
             ))
 
-
         conn.commit()
-
 
     except Exception:
 
         conn.rollback()
-
         raise
-
 
     finally:
 
