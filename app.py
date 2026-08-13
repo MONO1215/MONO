@@ -1,3 +1,4 @@
+import traceback
 from supabase import create_client
 from uuid import uuid4
 
@@ -1888,11 +1889,13 @@ def admin():
 
             except Exception as e:
 
-                return (
-                    "상품 이미지 업로드 중 오류가 발생했습니다: "
-                    + str(e),
-                    500
-                )
+    traceback.print_exc()
+
+    return (
+        "상품 이미지 업로드 중 오류가 발생했습니다: "
+        + str(e),
+        500
+    )
 
 
         # 로컬 파일명은 사용하지 않음
@@ -2490,11 +2493,13 @@ def edit_product(
 
                 except Exception as e:
 
-                    return (
-                        "상품 이미지 업로드 중 오류가 발생했습니다: "
-                        + str(e),
-                        500
-                    )
+    traceback.print_exc()
+
+    return (
+        "상품 이미지 업로드 중 오류가 발생했습니다: "
+        + str(e),
+        500
+    )
 
 
             # 로컬 이미지 파일명 미사용
