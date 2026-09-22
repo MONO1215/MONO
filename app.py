@@ -458,6 +458,9 @@ def product_detail(product_id):
                     smartstore_url,
                     coupang_price,
                     coupang_url,
+
+                    is_sold_out,
+
                     created_at
 
                 FROM products
@@ -469,6 +472,7 @@ def product_detail(product_id):
             product = cur.fetchone()
 
             if product is None:
+
                 return (
                     "상품을 찾을 수 없습니다.",
                     404
@@ -486,6 +490,7 @@ def product_detail(product_id):
             options = cur.fetchall()
 
     finally:
+
         conn.close()
 
     return render_template(
