@@ -1650,9 +1650,7 @@ def admin():
                     smartstore_url,
                     coupang_price,
                     coupang_url,
-
                     is_sold_out,
-
                     created_at
 
                 FROM products

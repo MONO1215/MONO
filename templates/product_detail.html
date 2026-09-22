@@ -164,10 +164,14 @@
 
 
 
-            <!-- 기본 구매처 -->
+            <!-- ==================================================
+                 기본 구매처
+            ================================================== -->
 
             <div class="product-store-section">
 
+
+                <!-- 스마트스토어 -->
 
                 {% if product["smartstore_price"] %}
 
@@ -180,21 +184,42 @@
                         </span>
 
                         <strong>
-                            {{ "{:,}".format(product["smartstore_price"]) }}원
+
+                            {% if product["is_sold_out"] %}
+
+                                품절
+
+                            {% else %}
+
+                                {{ "{:,}".format(product["smartstore_price"]) }}원
+
+                            {% endif %}
+
                         </strong>
 
                     </div>
 
 
-                    {% if product["smartstore_url"] %}
+                    {% if product["is_sold_out"] %}
 
-                    <a
-                        href="{{ product['smartstore_url'] }}"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        구매하기
-                    </a>
+                        <button
+                            type="button"
+                            class="buy-button sold-out-button"
+                            disabled
+                        >
+                            품절
+                        </button>
+
+                    {% elif product["smartstore_url"] %}
+
+                        <a
+                            href="{{ product['smartstore_url'] }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="buy-button"
+                        >
+                            구매하기
+                        </a>
 
                     {% endif %}
 
@@ -203,6 +228,8 @@
                 {% endif %}
 
 
+
+                <!-- 쿠팡 -->
 
                 {% if product["coupang_price"] %}
 
@@ -215,27 +242,49 @@
                         </span>
 
                         <strong>
-                            {{ "{:,}".format(product["coupang_price"]) }}원
+
+                            {% if product["is_sold_out"] %}
+
+                                품절
+
+                            {% else %}
+
+                                {{ "{:,}".format(product["coupang_price"]) }}원
+
+                            {% endif %}
+
                         </strong>
 
                     </div>
 
 
-                    {% if product["coupang_url"] %}
+                    {% if product["is_sold_out"] %}
 
-                    <a
-                        href="{{ product['coupang_url'] }}"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        구매하기
-                    </a>
+                        <button
+                            type="button"
+                            class="buy-button sold-out-button"
+                            disabled
+                        >
+                            품절
+                        </button>
+
+                    {% elif product["coupang_url"] %}
+
+                        <a
+                            href="{{ product['coupang_url'] }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="buy-button"
+                        >
+                            구매하기
+                        </a>
 
                     {% endif %}
 
                 </div>
 
                 {% endif %}
+
 
             </div>
 
@@ -263,6 +312,9 @@
                     </h3>
 
 
+
+                    <!-- 스마트스토어 옵션 -->
+
                     {% if option["smartstore_price"] %}
 
                     <div class="detail-option-store">
@@ -271,20 +323,41 @@
                             스마트스토어
                         </span>
 
+
                         <strong>
-                            {{ "{:,}".format(option["smartstore_price"]) }}원
+
+                            {% if product["is_sold_out"] %}
+
+                                품절
+
+                            {% else %}
+
+                                {{ "{:,}".format(option["smartstore_price"]) }}원
+
+                            {% endif %}
+
                         </strong>
 
 
-                        {% if option["smartstore_url"] %}
+                        {% if product["is_sold_out"] %}
 
-                        <a
-                            href="{{ option['smartstore_url'] }}"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                        >
-                            구매
-                        </a>
+                            <button
+                                type="button"
+                                class="buy-button sold-out-button"
+                                disabled
+                            >
+                                품절
+                            </button>
+
+                        {% elif option["smartstore_url"] %}
+
+                            <a
+                                href="{{ option['smartstore_url'] }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                구매
+                            </a>
 
                         {% endif %}
 
@@ -293,6 +366,8 @@
                     {% endif %}
 
 
+
+                    <!-- 쿠팡 옵션 -->
 
                     {% if option["coupang_price"] %}
 
@@ -302,26 +377,48 @@
                             쿠팡
                         </span>
 
+
                         <strong>
-                            {{ "{:,}".format(option["coupang_price"]) }}원
+
+                            {% if product["is_sold_out"] %}
+
+                                품절
+
+                            {% else %}
+
+                                {{ "{:,}".format(option["coupang_price"]) }}원
+
+                            {% endif %}
+
                         </strong>
 
 
-                        {% if option["coupang_url"] %}
+                        {% if product["is_sold_out"] %}
 
-                        <a
-                            href="{{ option['coupang_url'] }}"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                        >
-                            구매
-                        </a>
+                            <button
+                                type="button"
+                                class="buy-button sold-out-button"
+                                disabled
+                            >
+                                품절
+                            </button>
+
+                        {% elif option["coupang_url"] %}
+
+                            <a
+                                href="{{ option['coupang_url'] }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                구매
+                            </a>
 
                         {% endif %}
 
                     </div>
 
                     {% endif %}
+
 
                 </div>
 
