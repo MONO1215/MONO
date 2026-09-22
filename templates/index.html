@@ -74,36 +74,38 @@
                 스포츠용품
             </a>
 
+
             {% if session.get("user_logged_in") %}
 
-    <a
-    href="{{ url_for('profile') }}"
-    class="user-header-name"
->
-    {{ session.get("username") }}님
-</a>
+                <a
+                    href="{{ url_for('profile') }}"
+                    class="user-header-name"
+                >
+                    {{ session.get("username") }}님
+                </a>
 
-    <a href="{{ url_for('logout') }}">
-        로그아웃
-    </a>
+                <a href="{{ url_for('logout') }}">
+                    로그아웃
+                </a>
 
-{% else %}
+            {% else %}
 
-    <a href="{{ url_for('login') }}">
-        로그인
-    </a>
+                <a href="{{ url_for('login') }}">
+                    로그인
+                </a>
 
-    <a href="{{ url_for('register') }}">
-        회원가입
-    </a>
+                <a href="{{ url_for('register') }}">
+                    회원가입
+                </a>
 
-{% endif %}
+            {% endif %}
 
         </nav>
 
     </div>
 
 </header>
+
 
 <!-- =========================
      메인 배너
@@ -128,89 +130,133 @@
 
     <section class="products">
 
-    <h2>추천 상품</h2>
+        <h2>
+            추천 상품
+        </h2>
 
-    <div class="product-grid">
+        <div class="product-grid">
 
-        {% for product in products %}
+            {% for product in products %}
 
-        <div class="product-card">
+            <div class="product-card">
 
-            <a
-                href="{{ url_for('product_detail', product_id=product['id']) }}"
-                class="product-main-link"
-            >
-
-                {% if product["image_file"] %}
-
-                <img
-                    class="product-image-real"
-                    src="{{ url_for(
-                        'static',
-                        filename='uploads/products/' + product['image_file']
+                <a
+                    href="{{ url_for(
+                        'product_detail',
+                        product_id=product['id']
                     ) }}"
-                    alt="{{ product['name'] }}"
+                    class="product-main-link"
                 >
 
-                {% elif product["image_url"] %}
+                    {% if product["image_file"] %}
 
-                <img
-                    class="product-image-real"
-                    src="{{ product['image_url'] }}"
-                    alt="{{ product['name'] }}"
-                >
+                    <img
+                        class="product-image-real"
+                        src="{{ url_for(
+                            'static',
+                            filename='uploads/products/' + product['image_file']
+                        ) }}"
+                        alt="{{ product['name'] }}"
+                    >
 
-                {% else %}
+                    {% elif product["image_url"] %}
 
-                <div class="product-image">
-                    상품 이미지
+                    <img
+                        class="product-image-real"
+                        src="{{ product['image_url'] }}"
+                        alt="{{ product['name'] }}"
+                    >
+
+                    {% else %}
+
+                    <div class="product-image">
+                        상품 이미지
+                    </div>
+
+                    {% endif %}
+
+
+                    <p class="product-category">
+                        {{ product["category"] }}
+                    </p>
+
+
+                    <h3>
+                        {{ product["name"] }}
+                    </h3>
+
+                </a>
+
+
+                <!-- =========================
+                     가격 / 품절
+                ========================= -->
+
+                <div class="store-prices">
+
+                    {% if product["is_sold_out"] %}
+
+                        <p class="product-sold-out">
+                            <strong>
+                                품절
+                            </strong>
+                        </p>
+
+                    {% else %}
+
+
+                        {% if product["smartstore_price"] %}
+
+                        <p>
+
+                            <span>
+                                스마트스토어
+                            </span>
+
+                            <strong>
+                                {{ "{:,}".format(product["smartstore_price"]) }}원
+                            </strong>
+
+                        </p>
+
+                        {% endif %}
+
+
+                        {% if product["coupang_price"] %}
+
+                        <p>
+
+                            <span>
+                                쿠팡
+                            </span>
+
+                            <strong>
+                                {{ "{:,}".format(product["coupang_price"]) }}원
+                            </strong>
+
+                        </p>
+
+                        {% endif %}
+
+
+                    {% endif %}
+
                 </div>
-
-                {% endif %}
-
-                <p class="product-category">
-                    {{ product["category"] }}
-                </p>
-
-                <h3>
-                    {{ product["name"] }}
-                </h3>
-
-            </a>
-
-            <div class="store-prices">
-
-                {% if product["smartstore_price"] %}
-                <p>
-                    <span>스마트스토어</span>
-                    <strong>
-                        {{ "{:,}".format(product["smartstore_price"]) }}원
-                    </strong>
-                </p>
-                {% endif %}
-
-                {% if product["coupang_price"] %}
-                <p>
-                    <span>쿠팡</span>
-                    <strong>
-                        {{ "{:,}".format(product["coupang_price"]) }}원
-                    </strong>
-                </p>
-                {% endif %}
 
             </div>
 
+
+            {% else %}
+
+            <p>
+                등록된 상품이 없습니다.
+            </p>
+
+            {% endfor %}
+
         </div>
 
-        {% else %}
-
-        <p>등록된 상품이 없습니다.</p>
-
-        {% endfor %}
-
-    </div>
-
-</section>
+    </section>
 
 </main>
 

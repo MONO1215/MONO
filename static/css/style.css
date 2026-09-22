@@ -2095,3 +2095,13 @@ nav a.active {
     background: #111111;
     color: #ffffff;
 }
+
+/* =========================================
+   상품 카드 품절 표시
+========================================= */
+
+.product-card-soldout {
+    margin-top: 6px;
+    font-size: 16px;
+    font-weight: 700;
+}
