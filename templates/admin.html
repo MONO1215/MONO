@@ -531,46 +531,76 @@
 
 
 
-                        <!-- 수정 / 삭제 -->
+                        <!-- 수정 / 품절 / 삭제 -->
 
-                        <div class="admin-product-actions">
+<div class="admin-product-actions">
 
-
-                            <a
-                                href="{{ url_for(
-                                    'edit_product',
-                                    product_id=product['id']
-                                ) }}"
-                                class="admin-edit-button"
-                            >
-                                수정
-                            </a>
-
-
-                            <form
-                                method="POST"
-                                action="{{ url_for(
-                                    'delete_product',
-                                    product_id=product['id']
-                                ) }}"
-                                onsubmit="
-                                    return confirm(
-                                        '정말 이 상품을 삭제하시겠습니까?'
-                                    );
-                                "
-                            >
-
-                                <button
-                                    type="submit"
-                                    class="admin-delete-button"
-                                >
-                                    삭제
-                                </button>
-
-                            </form>
+    <!-- 수정 -->
+    <a
+        href="{{ url_for(
+            'edit_product',
+            product_id=product['id']
+        ) }}"
+        class="admin-edit-btn"
+    >
+        수정
+    </a>
 
 
-                        </div>
+    <!-- 품절 / 판매재개 -->
+    <form
+        action="{{ url_for(
+            'toggle_sold_out',
+            product_id=product['id']
+        ) }}"
+        method="POST"
+        class="admin-action-form"
+    >
+
+        {% if product["is_sold_out"] %}
+
+        <button
+            type="submit"
+            class="admin-soldout-btn active"
+        >
+            판매재개
+        </button>
+
+        {% else %}
+
+        <button
+            type="submit"
+            class="admin-soldout-btn"
+        >
+            품절
+        </button>
+
+        {% endif %}
+
+    </form>
+
+
+    <!-- 삭제 -->
+    <form
+        action="{{ url_for(
+            'delete_product',
+            product_id=product['id']
+        ) }}"
+        method="POST"
+        class="admin-action-form"
+        onsubmit="return confirm('정말 삭제하시겠습니까?');"
+    >
+
+        <button
+            type="submit"
+            class="admin-delete-btn"
+        >
+            삭제
+        </button>
+
+    </form>
+
+</div>
 
 
                     </div>

@@ -263,16 +263,23 @@ def init_db():
             """)
 
             cur.execute("""
-                ALTER TABLE products
-                ADD COLUMN IF NOT EXISTS
-                description_image BYTEA
-            """)
+    ALTER TABLE products
+    ADD COLUMN IF NOT EXISTS
+    description_image BYTEA
+""")
 
-            cur.execute("""
-                ALTER TABLE products
-                ADD COLUMN IF NOT EXISTS
-                description_image_mime TEXT
-            """)
+cur.execute("""
+    ALTER TABLE products
+    ADD COLUMN IF NOT EXISTS
+    description_image_mime TEXT
+""")
+
+cur.execute("""
+    ALTER TABLE products
+    ADD COLUMN IF NOT EXISTS
+    is_sold_out BOOLEAN
+    DEFAULT FALSE
+""")
 
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS product_options (
@@ -1612,52 +1619,55 @@ def admin():
         )
 
 
-    # ----------------------------------------------
-    # 관리자 페이지 상품 목록
-    # ----------------------------------------------
+# ----------------------------------------------
+# 관리자 페이지 상품 목록
+# ----------------------------------------------
 
-    conn = get_db_connection()
+conn = get_db_connection()
 
-    try:
+try:
 
-        with conn.cursor() as cur:
+    with conn.cursor() as cur:
 
-            cur.execute("""
-                SELECT
-                    id,
-                    name,
-                    category,
-                    image_url,
-                    image_file,
-                    description_html,
+        cur.execute("""
+            SELECT
+                id,
+                name,
+                category,
+                image_url,
+                image_file,
+                description_html,
 
-                    CASE
-                        WHEN description_image IS NOT NULL
-                        THEN TRUE
-                        ELSE FALSE
-                    END AS has_description_image,
+                CASE
+                    WHEN description_image IS NOT NULL
+                    THEN TRUE
+                    ELSE FALSE
+                END AS has_description_image,
 
-                    smartstore_price,
-                    smartstore_url,
-                    coupang_price,
-                    coupang_url,
-                    created_at
+                smartstore_price,
+                smartstore_url,
+                coupang_price,
+                coupang_url,
 
-                FROM products
-                ORDER BY id DESC
-            """)
+                is_sold_out,
 
-            products = cur.fetchall()
+                created_at
 
-    finally:
+            FROM products
+            ORDER BY id DESC
+        """)
 
-        conn.close()
+        products = cur.fetchall()
+
+finally:
+
+    conn.close()
 
 
-    return render_template(
-        "admin.html",
-        products=products
-    )
+return render_template(
+    "admin.html",
+    products=products
+)
 
 
 # ==================================================
@@ -2104,6 +2114,71 @@ def edit_product(product_id):
     finally:
 
         conn.close()
+
+
+# ==================================================
+# 상품 품절 / 판매 재개
+# ==================================================
+
+@app.route(
+    "/admin/product/<int:product_id>/sold-out",
+    methods=["POST"]
+)
+@admin_login_required
+def toggle_sold_out(product_id):
+
+    conn = get_db_connection()
+
+    try:
+
+        with conn.cursor() as cur:
+
+            # 현재 품절 상태 확인
+            cur.execute("""
+                SELECT is_sold_out
+                FROM products
+                WHERE id = %s
+            """, (
+                product_id,
+            ))
+
+            product = cur.fetchone()
+
+            if product is None:
+
+                return (
+                    "상품을 찾을 수 없습니다.",
+                    404
+                )
+
+            # 현재 상태 반대로 변경
+            new_status = not bool(
+                product["is_sold_out"]
+            )
+
+            cur.execute("""
+                UPDATE products
+                SET is_sold_out = %s
+                WHERE id = %s
+            """, (
+                new_status,
+                product_id
+            ))
+
+        conn.commit()
+
+    except Exception:
+
+        conn.rollback()
+        raise
+
+    finally:
+
+        conn.close()
+
+    return redirect(
+        url_for("admin")
+    )
 
 
 # ==================================================

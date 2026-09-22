@@ -1879,3 +1879,219 @@ nav a.active {
 
     background: #f7f7f7;
 }
+
+/* =========================================
+   관리자 상품 버튼
+========================================= */
+
+.admin-product-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.admin-action-form {
+    margin: 0;
+}
+
+
+/* 수정 */
+
+.admin-edit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    height: 40px;
+    padding: 0 16px;
+
+    border: 1px solid #dddddd;
+    border-radius: 7px;
+
+    background: #ffffff;
+    color: #222222;
+
+    font-size: 14px;
+    text-decoration: none;
+
+    cursor: pointer;
+}
+
+
+/* 품절 */
+
+.admin-soldout-btn {
+    height: 40px;
+    padding: 0 16px;
+
+    border: 1px solid #dddddd;
+    border-radius: 7px;
+
+    background: #ffffff;
+    color: #222222;
+
+    font-size: 14px;
+
+    cursor: pointer;
+}
+
+.admin-soldout-btn:hover {
+    background: #f5f5f5;
+}
+
+
+/* 판매재개 상태 */
+
+.admin-soldout-btn.active {
+    background: #eeeeee;
+    color: #222222;
+}
+
+
+/* 삭제 */
+
+.admin-delete-btn {
+    height: 40px;
+    padding: 0 16px;
+
+    border: none;
+    border-radius: 7px;
+
+    background: #111111;
+    color: #ffffff;
+
+    font-size: 14px;
+
+    cursor: pointer;
+}
+
+/* =========================================
+   관리자 상품 액션 버튼
+========================================= */
+
+.admin-product-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.admin-action-form {
+    display: inline-block;
+    margin: 0;
+}
+
+.admin-edit-btn,
+.admin-soldout-btn,
+.admin-delete-btn {
+    height: 40px;
+    padding: 0 16px;
+    border-radius: 7px;
+    font-size: 14px;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.admin-edit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid #dddddd;
+    background: #ffffff;
+    color: #222222;
+
+    text-decoration: none;
+}
+
+.admin-soldout-btn {
+    border: 1px solid #dddddd;
+    background: #ffffff;
+    color: #222222;
+}
+
+.admin-soldout-btn:hover {
+    background: #f5f5f5;
+}
+
+.admin-soldout-btn.active {
+    border-color: #111111;
+    background: #eeeeee;
+    color: #111111;
+}
+
+.admin-delete-btn {
+    border: 1px solid #111111;
+    background: #111111;
+    color: #ffffff;
+}
+
+/* =========================================
+   관리자 상품 관리 버튼
+========================================= */
+
+.admin-product-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.admin-action-form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.admin-edit-btn,
+.admin-soldout-btn,
+.admin-delete-btn {
+    height: 40px;
+    padding: 0 16px;
+
+    border-radius: 7px;
+
+    font-size: 14px;
+    font-weight: 500;
+
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+.admin-edit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid #dddddd;
+
+    background: #ffffff;
+    color: #222222;
+
+    text-decoration: none;
+}
+
+.admin-soldout-btn {
+    border: 1px solid #dddddd;
+
+    background: #ffffff;
+    color: #222222;
+}
+
+.admin-soldout-btn:hover {
+    background: #f5f5f5;
+}
+
+.admin-soldout-btn.active {
+    border: 1px solid #111111;
+
+    background: #eeeeee;
+    color: #111111;
+}
+
+.admin-delete-btn {
+    border: 1px solid #111111;
+
+    background: #111111;
+    color: #ffffff;
+}
