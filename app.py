@@ -257,29 +257,30 @@ def init_db():
                     smartstore_url TEXT,
                     coupang_price INTEGER,
                     coupang_url TEXT,
+                    is_sold_out BOOLEAN DEFAULT FALSE,
                     created_at TIMESTAMP
                         DEFAULT CURRENT_TIMESTAMP
                 )
             """)
 
             cur.execute("""
-    ALTER TABLE products
-    ADD COLUMN IF NOT EXISTS
-    description_image BYTEA
-""")
+                ALTER TABLE products
+                ADD COLUMN IF NOT EXISTS
+                description_image BYTEA
+            """)
 
-cur.execute("""
-    ALTER TABLE products
-    ADD COLUMN IF NOT EXISTS
-    description_image_mime TEXT
-""")
+            cur.execute("""
+                ALTER TABLE products
+                ADD COLUMN IF NOT EXISTS
+                description_image_mime TEXT
+            """)
 
-cur.execute("""
-    ALTER TABLE products
-    ADD COLUMN IF NOT EXISTS
-    is_sold_out BOOLEAN
-    DEFAULT FALSE
-""")
+            cur.execute("""
+                ALTER TABLE products
+                ADD COLUMN IF NOT EXISTS
+                is_sold_out BOOLEAN
+                DEFAULT FALSE
+            """)
 
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS product_options (
@@ -300,6 +301,7 @@ cur.execute("""
         conn.commit()
 
     finally:
+
         conn.close()
 
 
@@ -1619,55 +1621,55 @@ def admin():
         )
 
 
-# ----------------------------------------------
-# 관리자 페이지 상품 목록
-# ----------------------------------------------
+    # ----------------------------------------------
+    # 관리자 페이지 상품 목록
+    # ----------------------------------------------
 
-conn = get_db_connection()
+    conn = get_db_connection()
 
-try:
+    try:
 
-    with conn.cursor() as cur:
+        with conn.cursor() as cur:
 
-        cur.execute("""
-            SELECT
-                id,
-                name,
-                category,
-                image_url,
-                image_file,
-                description_html,
+            cur.execute("""
+                SELECT
+                    id,
+                    name,
+                    category,
+                    image_url,
+                    image_file,
+                    description_html,
 
-                CASE
-                    WHEN description_image IS NOT NULL
-                    THEN TRUE
-                    ELSE FALSE
-                END AS has_description_image,
+                    CASE
+                        WHEN description_image IS NOT NULL
+                        THEN TRUE
+                        ELSE FALSE
+                    END AS has_description_image,
 
-                smartstore_price,
-                smartstore_url,
-                coupang_price,
-                coupang_url,
+                    smartstore_price,
+                    smartstore_url,
+                    coupang_price,
+                    coupang_url,
 
-                is_sold_out,
+                    is_sold_out,
 
-                created_at
+                    created_at
 
-            FROM products
-            ORDER BY id DESC
-        """)
+                FROM products
+                ORDER BY id DESC
+            """)
 
-        products = cur.fetchall()
+            products = cur.fetchall()
 
-finally:
+    finally:
 
-    conn.close()
+        conn.close()
 
 
-return render_template(
-    "admin.html",
-    products=products
-)
+    return render_template(
+        "admin.html",
+        products=products
+    )
 
 
 # ==================================================
