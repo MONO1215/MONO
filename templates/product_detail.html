@@ -291,142 +291,171 @@
 
 
             <!-- ==================================================
-                 상품 옵션
-            ================================================== -->
+     상품 옵션 선택
+================================================== -->
 
-            {% if options %}
+{% if options %}
 
-            <div class="detail-options">
+<div class="detail-options">
 
-                <h2>
-                    상품 옵션
-                </h2>
+    <h2>상품 옵션</h2>
 
+    <!-- 옵션 선택창 -->
 
-                {% for option in options %}
+    <select
+        id="product-option-select"
+        class="product-option-select"
+        onchange="changeProductOption()"
+    >
 
-                <div class="detail-option-box">
+        <option value="">
+            옵션을 선택하세요
+        </option>
 
-                    <h3>
-                        {{ option["option_name"] }}
-                    </h3>
+        {% for option in options %}
 
+        <option value="{{ loop.index0 }}">
+            {{ option["option_name"] }}
+        </option>
 
+        {% endfor %}
 
-                    <!-- 스마트스토어 옵션 -->
-
-                    {% if option["smartstore_price"] %}
-
-                    <div class="detail-option-store">
-
-                        <span>
-                            스마트스토어
-                        </span>
-
-
-                        <strong>
-
-                            {% if product["is_sold_out"] %}
-
-                                품절
-
-                            {% else %}
-
-                                {{ "{:,}".format(option["smartstore_price"]) }}원
-
-                            {% endif %}
-
-                        </strong>
+    </select>
 
 
-                        {% if product["is_sold_out"] %}
+    <!-- 선택한 옵션의 구매 정보 -->
 
-                            <button
-                                type="button"
-                                class="buy-button sold-out-button"
-                                disabled
-                            >
-                                품절
-                            </button>
+    <div
+        id="selected-option-info"
+        class="selected-option-info"
+        style="display: none;"
+    >
 
-                        {% elif option["smartstore_url"] %}
+        {% for option in options %}
 
-                            <a
-                                href="{{ option['smartstore_url'] }}"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                구매
-                            </a>
+        <div
+            class="selected-option-box"
+            id="option-box-{{ loop.index0 }}"
+            style="display: none;"
+        >
 
-                        {% endif %}
-
-                    </div>
-
-                    {% endif %}
+            <h3>
+                {{ option["option_name"] }}
+            </h3>
 
 
+            <!-- 스마트스토어 -->
 
-                    <!-- 쿠팡 옵션 -->
+            {% if option["smartstore_price"] is not none %}
 
-                    {% if option["coupang_price"] %}
+            <div class="detail-option-store">
 
-                    <div class="detail-option-store">
+                <span>
+                    스마트스토어
+                </span>
 
-                        <span>
-                            쿠팡
-                        </span>
+                <strong>
 
+                    {% if product["is_sold_out"] %}
 
-                        <strong>
+                        품절
 
-                            {% if product["is_sold_out"] %}
+                    {% else %}
 
-                                품절
-
-                            {% else %}
-
-                                {{ "{:,}".format(option["coupang_price"]) }}원
-
-                            {% endif %}
-
-                        </strong>
-
-
-                        {% if product["is_sold_out"] %}
-
-                            <button
-                                type="button"
-                                class="buy-button sold-out-button"
-                                disabled
-                            >
-                                품절
-                            </button>
-
-                        {% elif option["coupang_url"] %}
-
-                            <a
-                                href="{{ option['coupang_url'] }}"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                구매
-                            </a>
-
-                        {% endif %}
-
-                    </div>
+                        {{ "{:,}".format(option["smartstore_price"]) }}원
 
                     {% endif %}
 
+                </strong>
 
-                </div>
 
-                {% endfor %}
+                {% if product["is_sold_out"] %}
+
+                    <button
+                        type="button"
+                        class="option-soldout-button"
+                        disabled
+                    >
+                        품절
+                    </button>
+
+                {% elif option["smartstore_url"] %}
+
+                    <a
+                        href="{{ option['smartstore_url'] }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        구매
+                    </a>
+
+                {% endif %}
 
             </div>
 
             {% endif %}
+
+
+            <!-- 쿠팡 -->
+
+            {% if option["coupang_price"] is not none %}
+
+            <div class="detail-option-store">
+
+                <span>
+                    쿠팡
+                </span>
+
+                <strong>
+
+                    {% if product["is_sold_out"] %}
+
+                        품절
+
+                    {% else %}
+
+                        {{ "{:,}".format(option["coupang_price"]) }}원
+
+                    {% endif %}
+
+                </strong>
+
+
+                {% if product["is_sold_out"] %}
+
+                    <button
+                        type="button"
+                        class="option-soldout-button"
+                        disabled
+                    >
+                        품절
+                    </button>
+
+                {% elif option["coupang_url"] %}
+
+                    <a
+                        href="{{ option['coupang_url'] }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        구매
+                    </a>
+
+                {% endif %}
+
+            </div>
+
+            {% endif %}
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+{% endif %}
 
 
         </div>
@@ -495,6 +524,52 @@
     </p>
 
 </footer>
+
+
+<script>
+
+function changeProductOption() {
+
+    const select = document.getElementById(
+        "product-option-select"
+    );
+
+    const selectedValue = select.value;
+
+    const optionInfo = document.getElementById(
+        "selected-option-info"
+    );
+
+    const optionBoxes = document.querySelectorAll(
+        ".selected-option-box"
+    );
+
+    // 기존 옵션 모두 숨기기
+    optionBoxes.forEach(function(box) {
+        box.style.display = "none";
+    });
+
+    // 선택하지 않은 경우
+    if (selectedValue === "") {
+        optionInfo.style.display = "none";
+        return;
+    }
+
+    // 선택한 옵션만 표시
+    const selectedBox = document.getElementById(
+        "option-box-" + selectedValue
+    );
+
+    if (selectedBox) {
+
+        optionInfo.style.display = "block";
+        selectedBox.style.display = "block";
+
+    }
+
+}
+
+</script>
 
 
 </body>
