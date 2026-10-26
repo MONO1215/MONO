@@ -283,6 +283,11 @@ def init_db():
             """)
 
             cur.execute("""
+                ALTER TABLE products
+                ADD COLUMN IF NOT EXISTS bank_transfer_price INTEGER
+            """)
+
+            cur.execute("""
                 CREATE TABLE IF NOT EXISTS product_options (
                     id SERIAL PRIMARY KEY,
                     product_id INTEGER NOT NULL,
@@ -296,6 +301,11 @@ def init_db():
                         REFERENCES products(id)
                         ON DELETE CASCADE
                 )
+            """)
+
+            cur.execute("""
+                ALTER TABLE product_options
+                ADD COLUMN IF NOT EXISTS bank_transfer_price INTEGER
             """)
 
         conn.commit()
@@ -458,6 +468,7 @@ def product_detail(product_id):
                     smartstore_url,
                     coupang_price,
                     coupang_url,
+                    bank_transfer_price,
 
                     is_sold_out,
 
@@ -1350,6 +1361,10 @@ def admin():
             ""
         ).strip()
 
+        bank_transfer_price = request.form.get(
+            "bank_transfer_price", ""
+        ).strip()
+
 
         # ------------------------------------------
         # 대표 이미지
@@ -1474,9 +1489,11 @@ def admin():
                         smartstore_price,
                         smartstore_url,
                         coupang_price,
-                        coupang_url
+                        coupang_url,
+                        bank_transfer_price
                     )
                     VALUES (
+                        %s,
                         %s,
                         %s,
                         %s,
@@ -1509,7 +1526,8 @@ def admin():
                     if coupang_price
                     else None,
 
-                    coupang_url
+                    coupang_url,
+                    int(bank_transfer_price) if bank_transfer_price else None
                 ))
 
                 product_id = (
@@ -1551,19 +1569,26 @@ def admin():
                 )
             )
 
+            option_bank_transfer_prices = request.form.getlist(
+                "option_bank_transfer_price[]"
+            )
+
+
 
             for (
                 option_name,
                 option_smart_price,
                 option_smart_url,
                 option_coupang_price,
-                option_coupang_url
+                option_coupang_url,
+                option_bank_price
             ) in zip(
                 option_names,
                 option_smartstore_prices,
                 option_smartstore_urls,
                 option_coupang_prices,
-                option_coupang_urls
+                option_coupang_urls,
+                option_bank_transfer_prices
             ):
 
                 option_name = (
@@ -1582,9 +1607,11 @@ def admin():
                             smartstore_price,
                             smartstore_url,
                             coupang_price,
-                            coupang_url
+                            coupang_url,
+                            bank_transfer_price
                         )
                         VALUES (
+                            %s,
                             %s,
                             %s,
                             %s,
@@ -1606,7 +1633,8 @@ def admin():
                         if option_coupang_price
                         else None,
 
-                        option_coupang_url.strip()
+                        option_coupang_url.strip(),
+                        int(option_bank_price) if option_bank_price else None
                     ))
 
             conn.commit()
@@ -1655,6 +1683,7 @@ def admin():
                     smartstore_url,
                     coupang_price,
                     coupang_url,
+                    bank_transfer_price,
                     is_sold_out,
                     created_at
 
@@ -1716,6 +1745,7 @@ def edit_product(product_id):
                     smartstore_url,
                     coupang_price,
                     coupang_url,
+                    bank_transfer_price,
                     created_at
 
                 FROM products
@@ -1790,6 +1820,10 @@ def edit_product(product_id):
             coupang_url = request.form.get(
                 "coupang_url",
                 ""
+            ).strip()
+
+            bank_transfer_price = request.form.get(
+                "bank_transfer_price", ""
             ).strip()
 
 
@@ -1932,7 +1966,8 @@ def edit_product(product_id):
                             smartstore_price = %s,
                             smartstore_url = %s,
                             coupang_price = %s,
-                            coupang_url = %s
+                            coupang_url = %s,
+                            bank_transfer_price = %s
                         WHERE id = %s
                     """, (
                         name,
@@ -1954,6 +1989,7 @@ def edit_product(product_id):
                         else None,
 
                         coupang_url,
+                        int(bank_transfer_price) if bank_transfer_price else None,
                         product_id
                     ))
 
@@ -1970,7 +2006,8 @@ def edit_product(product_id):
                             smartstore_price = %s,
                             smartstore_url = %s,
                             coupang_price = %s,
-                            coupang_url = %s
+                            coupang_url = %s,
+                            bank_transfer_price = %s
                         WHERE id = %s
                     """, (
                         name,
@@ -1990,6 +2027,7 @@ def edit_product(product_id):
                         else None,
 
                         coupang_url,
+                        int(bank_transfer_price) if bank_transfer_price else None,
                         product_id
                     ))
 
@@ -2037,19 +2075,26 @@ def edit_product(product_id):
                 )
             )
 
+            option_bank_transfer_prices = request.form.getlist(
+                "option_bank_transfer_price[]"
+            )
+
+
 
             for (
                 option_name,
                 smart_price,
                 smart_url,
                 cp_price,
-                cp_url
+                cp_url,
+                bank_price
             ) in zip(
                 option_names,
                 option_smartstore_prices,
                 option_smartstore_urls,
                 option_coupang_prices,
-                option_coupang_urls
+                option_coupang_urls,
+                option_bank_transfer_prices
             ):
 
                 option_name = (
@@ -2069,9 +2114,11 @@ def edit_product(product_id):
                             smartstore_price,
                             smartstore_url,
                             coupang_price,
-                            coupang_url
+                            coupang_url,
+                            bank_transfer_price
                         )
                         VALUES (
+                            %s,
                             %s,
                             %s,
                             %s,
@@ -2093,7 +2140,8 @@ def edit_product(product_id):
                         if cp_price
                         else None,
 
-                        cp_url.strip()
+                        cp_url.strip(),
+                        int(bank_price) if bank_price else None
                     ))
 
 

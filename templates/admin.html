@@ -339,7 +339,9 @@
 
                         <!-- 쿠팡 -->
 
-                        <div class="store-box">
+                        
+
+<div class="store-box">
 
                             <h3>
                                 쿠팡
@@ -377,6 +379,18 @@
 
                         </div>
 
+                    
+
+                        <!-- 계좌이체: 주문 기능은 추후 구현 -->
+                        <div class="store-box">
+                            <h3>계좌이체</h3>
+                            <label>판매 가격</label>
+                            <div class="price-input">
+                                <input type="number" name="bank_transfer_price" min="0" step="1" placeholder="계좌이체 가격" >
+                                <span>원</span>
+                            </div>
+                            <p class="form-help">주문하기 기능은 준비 중입니다.</p>
+                        </div>
                     </div>
 
 <div id="options-container">
@@ -519,6 +533,9 @@
 
                                 {% endif %}
 
+                                {% if product['bank_transfer_price'] is not none %}
+                                <span>계좌이체 {{ "{:,}".format(product['bank_transfer_price']) }}원</span>
+                                {% endif %}
                             </div>
 
                         </div>
@@ -761,9 +778,19 @@ function addOption() {
                 </div>
 
             </div>
-
         </div>
 
+
+
+        <div class="option-store-box">
+            <h4>계좌이체</h4>
+            <div class="option-store-fields">
+                <div>
+                    <label>판매 가격</label>
+                    <input type="number" name="option_bank_transfer_price[]" min="0" step="1" placeholder="계좌이체 가격">
+                </div>
+            </div>
+        </div>
     `;
 
 
