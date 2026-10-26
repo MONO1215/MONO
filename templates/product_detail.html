@@ -1,25 +1,123 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>{{ product['name'] }} - MONO</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+
     <style>
-        .mono-option-select {width:100%;padding:14px;border:1px solid #ddd;border-radius:8px;background:#fff;font-size:16px;margin:12px 0 18px;}
-        .mono-selected-option {margin:0 0 12px;font-size:16px;font-weight:700;}
-        .mono-store-row {display:flex;align-items:center;justify-content:space-between;gap:14px;border:1px solid #ddd;border-radius:8px;padding:18px;margin-bottom:12px;}
-        .mono-store-label {display:block;color:#777;font-size:13px;margin-bottom:7px;}
-        .mono-store-price {font-size:18px;font-weight:700;}
-        .mono-buy-link {display:inline-block;white-space:nowrap;background:#111;color:#fff;text-decoration:none;border-radius:6px;padding:12px 18px;}
-        .mono-buy-link[aria-disabled="true"] {background:#aaa;cursor:not-allowed;pointer-events:none;}
-        .mono-no-store {color:#777;}
+        .mono-option-select {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fff;
+            font-size: 16px;
+            margin: 12px 0 18px;
+        }
+
+        .mono-selected-option {
+            margin: 0 0 12px;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .mono-store-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 18px;
+            margin-bottom: 12px;
+        }
+
+        .mono-store-label {
+            display: block;
+            color: #777;
+            font-size: 13px;
+            margin-bottom: 7px;
+        }
+
+        .mono-store-price {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .mono-buy-link {
+            display: inline-block;
+            white-space: nowrap;
+            background: #111;
+            color: #fff;
+            text-decoration: none;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 18px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .mono-buy-link[aria-disabled="true"],
+        .mono-buy-link:disabled {
+            background: #aaa;
+            color: #fff;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .mono-no-store {
+            color: #777;
+        }
+
+        .mono-bank-transfer {
+            background: #fafafa;
+            border-color: #ddd;
+        }
+
+        .mono-bank-transfer .mono-store-label {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .mono-bank-notice {
+            margin-top: 6px;
+            font-size: 12px;
+            color: #888;
+        }
+
+        @media (max-width: 480px) {
+            .mono-store-row {
+                padding: 14px;
+                gap: 10px;
+            }
+
+            .mono-store-price {
+                font-size: 16px;
+            }
+
+            .mono-buy-link {
+                padding: 11px 14px;
+                font-size: 13px;
+            }
+        }
     </style>
 </head>
+
 <body>
+
 <header>
     <div class="header-container">
+
         <a href="/" class="logo">MONO</a>
+
         <nav>
             <a href="/">홈</a>
             <a href="/products">전체상품</a>
@@ -31,140 +129,521 @@
             <a href="/category/car">자동차용품</a>
             <a href="/category/office">사무용품</a>
             <a href="/category/sports">스포츠용품</a>
+
             {% if session.get('user_logged_in') %}
-                <a href="{{ url_for('profile') }}" class="user-header-name">{{ session.get('username') }}님</a>
-                <a href="{{ url_for('logout') }}">로그아웃</a>
+
+                <a
+                    href="{{ url_for('profile') }}"
+                    class="user-header-name"
+                >
+                    {{ session.get('username') }}님
+                </a>
+
+                <a href="{{ url_for('logout') }}">
+                    로그아웃
+                </a>
+
             {% else %}
-                <a href="{{ url_for('login') }}">로그인</a>
-                <a href="{{ url_for('register') }}">회원가입</a>
+
+                <a href="{{ url_for('login') }}">
+                    로그인
+                </a>
+
+                <a href="{{ url_for('register') }}">
+                    회원가입
+                </a>
+
             {% endif %}
         </nav>
+
     </div>
 </header>
 
+
 <main class="product-detail-page">
+
     <div class="product-detail-top">
+
+        <!-- 상품 이미지 -->
+
         <div class="product-detail-image">
+
             {% if product['image_file'] %}
-                <img src="{{ url_for('static', filename='uploads/products/' + product['image_file']) }}" alt="{{ product['name'] }}">
+
+                <img
+                    src="{{ url_for('static', filename='uploads/products/' + product['image_file']) }}"
+                    alt="{{ product['name'] }}"
+                >
+
             {% elif product['image_url'] %}
-                <img src="{{ product['image_url'] }}" alt="{{ product['name'] }}">
+
+                <img
+                    src="{{ product['image_url'] }}"
+                    alt="{{ product['name'] }}"
+                >
+
             {% else %}
-                <div class="product-detail-placeholder">상품 이미지</div>
+
+                <div class="product-detail-placeholder">
+                    상품 이미지
+                </div>
+
             {% endif %}
+
         </div>
+
+
+        <!-- 상품 정보 -->
 
         <div class="product-detail-info">
-            <p class="product-detail-category">{{ product['category'] }}</p>
-            <h1>{{ product['name'] }}</h1>
+
+            <p class="product-detail-category">
+                {{ product['category'] }}
+            </p>
+
+            <h1>
+                {{ product['name'] }}
+            </h1>
+
+
+            <!-- 상품 옵션 -->
+
             <div class="detail-options">
+
                 <h2>상품 옵션</h2>
-                <label for="mono-option-select">옵션 선택</label>
-                <select id="mono-option-select" class="mono-option-select" aria-label="상품 옵션 선택">
-                    {% if product['smartstore_price'] is not none or product['coupang_price'] is not none or product['smartstore_url'] or product['coupang_url'] %}
-                        <option value="base">기본 상품</option>
+
+                <label for="mono-option-select">
+                    옵션 선택
+                </label>
+
+                <select
+                    id="mono-option-select"
+                    class="mono-option-select"
+                    aria-label="상품 옵션 선택"
+                >
+
+                    {% if
+                        product['smartstore_price'] is not none
+                        or product['coupang_price'] is not none
+                        or product['smartstore_url']
+                        or product['coupang_url']
+                        or product.get('bank_transfer_price') is not none
+                    %}
+
+                        <option value="base">
+                            기본 상품
+                        </option>
+
                     {% endif %}
+
+
                     {% for option in options %}
-                        <option value="option-{{ loop.index0 }}">{{ option['option_name'] }}</option>
+
+                        <option value="option-{{ loop.index0 }}">
+                            {{ option['option_name'] }}
+                        </option>
+
                     {% endfor %}
+
                 </select>
-                <p class="mono-selected-option" id="mono-selected-option"></p>
-                <div id="mono-store-results" aria-live="polite"></div>
+
+
+                <p
+                    class="mono-selected-option"
+                    id="mono-selected-option"
+                ></p>
+
+
+                <!-- 구매 방식 표시 -->
+
+                <div
+                    id="mono-store-results"
+                    aria-live="polite"
+                ></div>
+
             </div>
+
         </div>
+
     </div>
 
+
+    <!-- 상품 상세 설명 -->
+
     <section class="product-description-detail">
-        <h2 class="product-description-title">상품 상세정보</h2>
+
+        <h2 class="product-description-title">
+            상품 상세정보
+        </h2>
+
         {% if product['has_description_image'] %}
+
             <div class="product-description-image-wrap">
-                <img src="{{ url_for('product_description_image', product_id=product['id']) }}" alt="{{ product['name'] }} 상품 상세 설명" class="product-description-image">
+
+                <img
+                    src="{{ url_for('product_description_image', product_id=product['id']) }}"
+                    alt="{{ product['name'] }} 상품 상세 설명"
+                    class="product-description-image"
+                >
+
             </div>
+
         {% elif product['description_html'] %}
-            <div class="product-description-html">{{ product['description_html'] | safe }}</div>
+
+            <div class="product-description-html">
+                {{ product['description_html'] | safe }}
+            </div>
+
         {% else %}
-            <div class="product-description-empty">등록된 상품 상세 설명이 없습니다.</div>
+
+            <div class="product-description-empty">
+                등록된 상품 상세 설명이 없습니다.
+            </div>
+
         {% endif %}
+
     </section>
+
 </main>
-<footer><p>© 2026 MONO. All rights reserved.</p></footer>
+
+
+<footer>
+    <p>© 2026 MONO. All rights reserved.</p>
+</footer>
+
 
 <script>
+
+    // ==========================================
+    // 상품 품절 여부
+    // ==========================================
+
     const isSoldOut = {{ product['is_sold_out'] | tojson }};
+
+
+    // ==========================================
+    // 상품 옵션 데이터
+    // ==========================================
+
     const optionData = {
+
         base: {
+
             name: '기본 상품',
-            smartstore_price: {{ product['smartstore_price'] | tojson }},
-            smartstore_url: {{ product['smartstore_url'] | tojson }},
-            coupang_price: {{ product['coupang_price'] | tojson }},
-            coupang_url: {{ product['coupang_url'] | tojson }}
+
+            smartstore_price:
+                {{ product['smartstore_price'] | tojson }},
+
+            smartstore_url:
+                {{ product['smartstore_url'] | tojson }},
+
+            coupang_price:
+                {{ product['coupang_price'] | tojson }},
+
+            coupang_url:
+                {{ product['coupang_url'] | tojson }},
+
+            bank_transfer_price:
+                {{ product.get('bank_transfer_price') | tojson }}
+
         },
+
         {% for option in options %}
+
         'option-{{ loop.index0 }}': {
-            name: {{ option['option_name'] | tojson }},
-            smartstore_price: {{ option['smartstore_price'] | tojson }},
-            smartstore_url: {{ option['smartstore_url'] | tojson }},
-            coupang_price: {{ option['coupang_price'] | tojson }},
-            coupang_url: {{ option['coupang_url'] | tojson }}
+
+            name:
+                {{ option['option_name'] | tojson }},
+
+            smartstore_price:
+                {{ option['smartstore_price'] | tojson }},
+
+            smartstore_url:
+                {{ option['smartstore_url'] | tojson }},
+
+            coupang_price:
+                {{ option['coupang_price'] | tojson }},
+
+            coupang_url:
+                {{ option['coupang_url'] | tojson }},
+
+            bank_transfer_price:
+                {{ option.get('bank_transfer_price') | tojson }}
+
         }{% if not loop.last %},{% endif %}
+
         {% endfor %}
+
     };
 
-    const select = document.getElementById('mono-option-select');
-    const selectedLabel = document.getElementById('mono-selected-option');
-    const results = document.getElementById('mono-store-results');
+
+    // ==========================================
+    // HTML 요소
+    // ==========================================
+
+    const select = document.getElementById(
+        'mono-option-select'
+    );
+
+    const selectedLabel = document.getElementById(
+        'mono-selected-option'
+    );
+
+    const results = document.getElementById(
+        'mono-store-results'
+    );
+
+
+    // ==========================================
+    // 구매 방식 한 줄 생성
+    // ==========================================
+
+    function createStoreRow(store) {
+
+        const row = document.createElement('div');
+
+        row.className = 'mono-store-row';
+
+        if (store.type === 'bank') {
+            row.classList.add('mono-bank-transfer');
+        }
+
+
+        // 왼쪽 구매 정보
+
+        const info = document.createElement('div');
+
+        const label = document.createElement('span');
+
+        label.className = 'mono-store-label';
+
+        label.textContent = store.name;
+
+
+        const price = document.createElement('strong');
+
+        price.className = 'mono-store-price';
+
+
+        if (isSoldOut) {
+
+            price.textContent = '품절';
+
+        } else if (store.price !== null && store.price !== undefined) {
+
+            price.textContent =
+                Number(store.price).toLocaleString('ko-KR') + '원';
+
+        } else {
+
+            price.textContent = '가격 미등록';
+
+        }
+
+
+        info.append(label, price);
+
+
+        // 계좌이체 안내
+
+        if (store.type === 'bank' && !isSoldOut) {
+
+            const notice = document.createElement('p');
+
+            notice.className = 'mono-bank-notice';
+
+            notice.textContent = '계좌이체 주문 서비스 준비 중';
+
+            info.appendChild(notice);
+
+        }
+
+
+        // 오른쪽 버튼
+
+        if (store.type === 'bank') {
+
+            const button = document.createElement('button');
+
+            button.type = 'button';
+
+            button.className = 'mono-buy-link';
+
+            button.textContent = isSoldOut
+                ? '품절'
+                : '주문하기';
+
+            // 주문 시스템 구현 전까지 비활성화
+            button.disabled = true;
+
+            if (!isSoldOut) {
+                button.title = '계좌이체 주문 서비스 준비 중';
+            }
+
+            row.append(info, button);
+
+        } else {
+
+            const link = document.createElement('a');
+
+            link.className = 'mono-buy-link';
+
+            const validUrl = /^https?:\/\//i.test(
+                store.url || ''
+            );
+
+
+            if (isSoldOut || !validUrl) {
+
+                link.textContent = isSoldOut
+                    ? '품절'
+                    : '이동 불가';
+
+                link.setAttribute(
+                    'aria-disabled',
+                    'true'
+                );
+
+                link.removeAttribute('href');
+
+            } else {
+
+                link.textContent = '이동하기';
+
+                link.href = store.url;
+
+                link.target = '_blank';
+
+                link.rel = 'noopener noreferrer';
+
+            }
+
+            row.append(info, link);
+
+        }
+
+        return row;
+
+    }
+
+
+    // ==========================================
+    // 선택 옵션 표시
+    // ==========================================
 
     function renderOption() {
+
         results.replaceChildren();
+
+
         if (!select.options.length) {
-            selectedLabel.textContent = '등록된 상품 옵션이 없습니다.';
+
+            selectedLabel.textContent =
+                '등록된 상품 옵션이 없습니다.';
+
+            return;
+
+        }
+
+
+        const chosen = optionData[select.value];
+
+        if (!chosen) {
             return;
         }
-        const chosen = optionData[select.value];
-        if (!chosen) return;
-        selectedLabel.textContent = '선택한 옵션: ' + chosen.name;
-        let visible = 0;
-        for (const store of [
-            {name:'스마트스토어', price:chosen.smartstore_price, url:chosen.smartstore_url},
-            {name:'쿠팡', price:chosen.coupang_price, url:chosen.coupang_url}
-        ]) {
-            if (store.price === null && !store.url) continue;
-            visible++;
-            const row = document.createElement('div');
-            row.className = 'mono-store-row';
-            const info = document.createElement('div');
-            const label = document.createElement('span');
-            label.className = 'mono-store-label';
-            label.textContent = store.name;
-            const price = document.createElement('strong');
-            price.className = 'mono-store-price';
-            price.textContent = isSoldOut ? '품절' : (store.price !== null ? Number(store.price).toLocaleString('ko-KR') + '원' : '가격 문의');
-            info.append(label, price);
-            const link = document.createElement('a');
-            link.className = 'mono-buy-link';
-            const validUrl = /^https?:\/\//i.test(store.url || '');
-            if (isSoldOut || !validUrl) {
-                link.textContent = isSoldOut ? '품절' : '구매 불가';
-                link.setAttribute('aria-disabled', 'true');
-                link.removeAttribute('href');
-            } else {
-                link.textContent = '구매하기';
-                link.href = store.url;
-                link.target = '_blank';
-                link.rel = 'noopener noreferrer';
+
+
+        selectedLabel.textContent =
+            '선택한 옵션: ' + chosen.name;
+
+
+        // ======================================
+        // 스마트스토어 / 쿠팡 / 계좌이체
+        // ======================================
+
+        const stores = [
+
+            {
+                name: '스마트스토어',
+                type: 'external',
+                price: chosen.smartstore_price,
+                url: chosen.smartstore_url
+            },
+
+            {
+                name: '쿠팡',
+                type: 'external',
+                price: chosen.coupang_price,
+                url: chosen.coupang_url
+            },
+
+            {
+                name: '계좌이체',
+                type: 'bank',
+                price: chosen.bank_transfer_price,
+                url: null
             }
-            row.append(info, link);
+
+        ];
+
+
+        let visible = 0;
+
+
+        for (const store of stores) {
+
+            // 외부 구매처는 정보가 없으면 숨김
+            if (
+                store.type === 'external'
+                && store.price === null
+                && !store.url
+            ) {
+                continue;
+            }
+
+
+            // 계좌이체는 가격 등록 전에도 표시
+            visible++;
+
+
+            const row = createStoreRow(store);
+
             results.appendChild(row);
+
         }
+
+
         if (!visible) {
+
             const msg = document.createElement('p');
+
             msg.className = 'mono-no-store';
-            msg.textContent = '선택한 옵션의 구매 정보가 없습니다.';
+
+            msg.textContent =
+                '선택한 옵션의 구매 정보가 없습니다.';
+
             results.appendChild(msg);
+
         }
+
     }
-    select.addEventListener('change', renderOption);
+
+
+    // ==========================================
+    // 옵션 변경 이벤트
+    // ==========================================
+
+    select.addEventListener(
+        'change',
+        renderOption
+    );
+
+
+    // 최초 실행
+
     renderOption();
+
 </script>
+
 </body>
 </html>
