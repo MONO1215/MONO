@@ -244,7 +244,7 @@
 
     <input
         type="file"
-        name="description_image"
+        name="description_file"
         accept="image/*"
     >
 
@@ -257,14 +257,42 @@
 
 
                     <!-- ==================================================
-                         기본 구매 정보
+                         옵션
                     =================================================== -->
 
-                    <div class="form-group">
+                    <div class="options-section">
 
-                        <h2>
-                            기본 구매 정보
-                        </h2>
+                        <div class="options-header">
+
+                            <div>
+
+                                <h2>
+                                    상품 옵션 및 구매 정보
+                                </h2>
+
+                                <p>
+                                    옵션마다 가격과 구매 링크를 다르게 설정할 수 있습니다.
+                                </p>
+
+                            </div>
+
+
+                            <button
+                                type="button"
+                                class="add-option-button"
+                                onclick="addOption()"
+                            >
+                                + 옵션 추가
+                            </button>
+
+                        </div>
+
+
+                        <!-- 기본 상품 구매 정보: 기존 products 테이블 값 유지 -->
+<div class="option-row mono-basic-option">
+
+                        <h3>기본 상품</h3>
+<p class="form-help">옵션을 선택하지 않는 고객에게 표시되는 기본 가격과 구매 링크입니다.</p>
 
 
                         <!-- 스마트스토어 -->
@@ -351,41 +379,7 @@
 
                     </div>
 
-
-
-                    <!-- ==================================================
-                         옵션
-                    =================================================== -->
-
-                    <div class="options-section">
-
-                        <div class="options-header">
-
-                            <div>
-
-                                <h2>
-                                    상품 옵션
-                                </h2>
-
-                                <p>
-                                    옵션마다 가격과 구매 링크를 다르게 설정할 수 있습니다.
-                                </p>
-
-                            </div>
-
-
-                            <button
-                                type="button"
-                                class="add-option-button"
-                                onclick="addOption()"
-                            >
-                                + 옵션 추가
-                            </button>
-
-                        </div>
-
-
-                        <div id="options-container">
+<div id="options-container">
                         </div>
 
                     </div>
