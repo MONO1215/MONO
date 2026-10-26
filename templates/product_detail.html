@@ -107,7 +107,7 @@
 </main>
 <footer><p>© 2026 MONO. All rights reserved.</p></footer>
 
-<!-- 계좌이체 안내 팝업: 주문 기록이나 입금자명을 서버에 전송하지 않음 -->
+<!-- 계좌이체 주문 접수 팝업 -->
 <div id="mono-bank-modal" class="mono-modal-backdrop" hidden>
     <section class="mono-modal" role="dialog" aria-modal="true" aria-labelledby="mono-bank-modal-title" tabindex="-1">
         <button type="button" class="mono-modal-close-x" id="mono-bank-x" aria-label="팝업 닫기">&times;</button>
@@ -133,10 +133,13 @@
     const productName = {{ product['name'] | tojson }};
     // 계좌번호가 확정되면 아래 빈 문자열을 실제 번호로 변경하세요.
     // 계좌번호가 없는 동안에는 '입금 완료' 버튼이 비활성화됩니다.
-    const BANK_ACCOUNT_NUMBER = '';
+    const BANK_ACCOUNT_NUMBER = {{ bank_account_number | tojson }};
+    const ORDER_CSRF = {{ order_csrf | tojson }};
+    const PRODUCT_ID = {{ product["id"] | tojson }};
     const optionData = {
         base: {
             name: '기본 상품',
+            option_id: null,
             smartstore_price: {{ product['smartstore_price'] | tojson }},
             smartstore_url: {{ product['smartstore_url'] | tojson }},
             coupang_price: {{ product['coupang_price'] | tojson }},
@@ -146,6 +149,7 @@
         {% for option in options %}
         'option-{{ loop.index0 }}': {
             name: {{ option['option_name'] | tojson }},
+            option_id: {{ option['id'] | tojson }},
             smartstore_price: {{ option['smartstore_price'] | tojson }},
             smartstore_url: {{ option['smartstore_url'] | tojson }},
             coupang_price: {{ option['coupang_price'] | tojson }},
@@ -163,6 +167,7 @@
     const completeButton = document.getElementById('mono-bank-complete');
     const copyButton = document.getElementById('mono-bank-copy');
     let previousFocus = null;
+    let activeOption = null;
 
     function formatPrice(value) {
         return value === null || value === undefined ? '가격 미등록' : Number(value).toLocaleString('ko-KR') + '원';
@@ -170,6 +175,7 @@
     function openBankModal(chosen) {
         if (isSoldOut || chosen.bank_transfer_price === null || chosen.bank_transfer_price === undefined) return;
         previousFocus = document.activeElement;
+        activeOption = chosen;
         document.getElementById('mono-bank-product').textContent = productName + ' / ' + chosen.name;
         document.getElementById('mono-bank-amount').textContent = formatPrice(chosen.bank_transfer_price);
         document.getElementById('mono-bank-account').textContent = BANK_ACCOUNT_NUMBER || '계좌번호 등록 예정';
@@ -177,7 +183,7 @@
         completeButton.disabled = !BANK_ACCOUNT_NUMBER;
         depositorInput.value = '';
         document.getElementById('mono-bank-notice').textContent = BANK_ACCOUNT_NUMBER
-            ? '안내된 계좌로 직접 입금해 주세요. 이 버튼은 입금 사실을 확인하거나 주문을 저장하지 않습니다.'
+            ? '실제 입금 후 입금 완료를 눌러 신고해 주세요. 입금 여부는 관리자가 별도로 확인합니다.'
             : '계좌번호가 아직 등록되지 않아 입금할 수 없습니다. 현재 주문 접수 및 입금 확인 기능은 제공되지 않습니다.';
         modal.hidden = false;
         document.body.classList.add('mono-modal-open');
@@ -207,10 +213,23 @@
         catch { window.alert('계좌번호 복사에 실패했습니다.'); }
         setTimeout(() => { copyButton.textContent = '복사'; }, 1500);
     });
-    completeButton.addEventListener('click', () => {
-        if (!BANK_ACCOUNT_NUMBER) return;
-        if (!depositorInput.value.trim()) { window.alert('입금자명을 입력해 주세요.'); depositorInput.focus(); return; }
-        window.alert('입금 완료 버튼을 눌렀습니다. 현재 주문 접수 및 실제 입금 확인은 이루어지지 않습니다.');
+    completeButton.addEventListener('click', async () => {
+        if (!BANK_ACCOUNT_NUMBER || !activeOption) return;
+        const depositor = depositorInput.value.trim();
+        if (!depositor) { window.alert('입금자명을 입력해 주세요.'); depositorInput.focus(); return; }
+        completeButton.disabled = true;
+        try {
+            const response = await fetch({{ url_for('create_bank_order') | tojson }}, {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({csrf_token: ORDER_CSRF, product_id: PRODUCT_ID,
+                    option_id: activeOption.option_id, depositor_name: depositor})
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || '접수에 실패했습니다.');
+            window.alert('입금 신고 접수 완료! 주문번호: ' + data.order_id + '\n실제 입금 확인 후 결제 완료 처리됩니다.');
+            closeBankModal();
+        } catch (error) { window.alert(error.message); }
+        finally { completeButton.disabled = !BANK_ACCOUNT_NUMBER; }
     });
     function renderOption() {
         results.replaceChildren();

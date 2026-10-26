@@ -1,6 +1,7 @@
 import traceback
 from supabase import create_client
 from uuid import uuid4
+from secrets import token_urlsafe
 
 from flask import (
     Flask,
@@ -9,10 +10,12 @@ from flask import (
     redirect,
     url_for,
     session,
-    Response
+    Response,
+    jsonify,
+    abort
 )
 
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 
 import os
 import psycopg
@@ -58,6 +61,7 @@ SUPABASE_SERVICE_ROLE_KEY = os.environ.get(
 )
 
 SUPABASE_BUCKET = "mono-products"
+BANK_ACCOUNT_NUMBER = os.environ.get("MONO_BANK_ACCOUNT_NUMBER", "").strip()
 
 IS_VERCEL = bool(
     os.environ.get("VERCEL")
@@ -308,6 +312,24 @@ def init_db():
                 ADD COLUMN IF NOT EXISTS bank_transfer_price INTEGER
             """)
 
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS bank_orders (
+                    id BIGSERIAL PRIMARY KEY,
+                    product_id INTEGER,
+                    product_name TEXT NOT NULL,
+                    option_name TEXT NOT NULL,
+                    depositor_name VARCHAR(50) NOT NULL,
+                    amount INTEGER NOT NULL CHECK (amount > 0),
+                    status TEXT NOT NULL DEFAULT 'reported'
+                        CHECK (status IN ('reported','paid','cancelled','refunded')),
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    paid_at TIMESTAMPTZ,
+                    refunded_at TIMESTAMPTZ
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_bank_orders_status ON bank_orders(status)")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_bank_orders_paid_at ON bank_orders(paid_at)")
+
         conn.commit()
 
     finally:
@@ -440,6 +462,12 @@ def category_page(category_slug):
 # 상품 상세
 # ==================================================
 
+def get_order_csrf():
+    if "order_csrf" not in session:
+        session["order_csrf"] = token_urlsafe(32)
+    return session["order_csrf"]
+
+
 @app.route("/product/<int:product_id>")
 def product_detail(product_id):
 
@@ -507,7 +535,9 @@ def product_detail(product_id):
     return render_template(
         "product_detail.html",
         product=product,
-        options=options
+        options=options,
+        bank_account_number=BANK_ACCOUNT_NUMBER,
+        order_csrf=get_order_csrf()
     )
 
 
@@ -2273,6 +2303,146 @@ def delete_product(product_id):
     return redirect(
         url_for("admin")
     )
+
+
+# ==================================================
+# 계좌이체 주문 접수 / 관리자 주문 및 매출 관리
+# ==================================================
+
+@app.route("/api/bank-orders", methods=["POST"])
+def create_bank_order():
+    if not BANK_ACCOUNT_NUMBER:
+        return jsonify(error="계좌번호가 등록되지 않아 주문을 받을 수 없습니다."), 503
+    data = request.get_json(silent=True) or {}
+    if data.get("csrf_token") != session.get("order_csrf") or not session.get("order_csrf"):
+        return jsonify(error="보안 토큰이 유효하지 않습니다. 페이지를 새로고침해 주세요."), 403
+    depositor = str(data.get("depositor_name") or "").strip()
+    if not (1 <= len(depositor) <= 50):
+        return jsonify(error="입금자명을 1~50자로 입력해 주세요."), 400
+    try:
+        product_id = int(data.get("product_id"))
+    except (TypeError, ValueError):
+        return jsonify(error="상품 정보가 올바르지 않습니다."), 400
+    option_id = data.get("option_id")
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id,name,bank_transfer_price,is_sold_out FROM products WHERE id=%s", (product_id,))
+            product = cur.fetchone()
+            if not product or product["is_sold_out"]:
+                return jsonify(error="판매 중인 상품이 아닙니다."), 400
+            option_name = "기본 상품"
+            amount = product["bank_transfer_price"]
+            if option_id is not None:
+                try:
+                    option_id = int(option_id)
+                except (TypeError, ValueError):
+                    return jsonify(error="옵션 정보가 올바르지 않습니다."), 400
+                cur.execute("SELECT option_name,bank_transfer_price FROM product_options WHERE id=%s AND product_id=%s", (option_id, product_id))
+                option = cur.fetchone()
+                if not option:
+                    return jsonify(error="옵션을 찾을 수 없습니다."), 400
+                option_name, amount = option["option_name"], option["bank_transfer_price"]
+            if amount is None or amount <= 0:
+                return jsonify(error="계좌이체 판매가격이 등록되지 않았습니다."), 400
+            cur.execute("""INSERT INTO bank_orders (product_id,product_name,option_name,depositor_name,amount)
+                           VALUES (%s,%s,%s,%s,%s) RETURNING id""",
+                        (product_id, product["name"], option_name, depositor, amount))
+            order_id = cur.fetchone()["id"]
+        conn.commit()
+        return jsonify(ok=True, order_id=order_id, message="입금 신고가 접수되었습니다. 관리자가 실제 입금을 확인한 뒤 결제 완료로 처리합니다."), 201
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+@app.route("/admin/orders")
+@admin_login_required
+def admin_orders():
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM bank_orders ORDER BY created_at DESC LIMIT 500")
+            orders = cur.fetchall()
+    finally:
+        conn.close()
+    return render_template("admin_orders.html", orders=orders, csrf_token=get_order_csrf())
+
+
+@app.route("/admin/orders/<int:order_id>/status", methods=["POST"])
+@admin_login_required
+def admin_order_status(order_id):
+    if request.form.get("csrf_token") != session.get("order_csrf") or not session.get("order_csrf"):
+        abort(403)
+    status = request.form.get("status")
+    if status not in ("paid", "cancelled", "refunded"):
+        abort(400)
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT status FROM bank_orders WHERE id=%s FOR UPDATE", (order_id,))
+            order = cur.fetchone()
+            if not order:
+                abort(404)
+            old = order["status"]
+            allowed = {"reported": {"paid", "cancelled"}, "paid": {"refunded"}}
+            if status not in allowed.get(old, set()):
+                abort(400, "허용되지 않는 주문 상태 변경입니다.")
+            cur.execute("""UPDATE bank_orders SET status=%s,
+                paid_at=CASE WHEN %s='paid' THEN NOW() ELSE paid_at END,
+                refunded_at=CASE WHEN %s='refunded' THEN NOW() ELSE refunded_at END
+                WHERE id=%s""", (status, status, status, order_id))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return redirect(url_for("admin_orders"))
+
+
+@app.route("/admin/sales")
+@admin_login_required
+def admin_sales():
+    # 결제확인 시점 기준, 환불 주문은 전체 기간 집계에서 제외합니다.
+    today = date.today()
+    start = request.args.get("start", "")
+    end = request.args.get("end", "")
+    try:
+        start_date = date.fromisoformat(start) if start else today.replace(day=1)
+        end_date = date.fromisoformat(end) if end else today
+        if start_date > end_date or (end_date - start_date).days > 3660:
+            raise ValueError()
+    except ValueError:
+        abort(400, "올바른 조회 기간을 입력해 주세요.")
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""SELECT
+                COALESCE(SUM(amount) FILTER (WHERE (paid_at AT TIME ZONE 'Asia/Seoul')::date=%s),0) AS today_sales,
+                COALESCE(SUM(amount) FILTER (WHERE date_trunc('month',paid_at AT TIME ZONE 'Asia/Seoul')=date_trunc('month',NOW() AT TIME ZONE 'Asia/Seoul')),0) AS month_sales,
+                COALESCE(SUM(amount),0) AS total_sales, COUNT(*) AS paid_count
+                FROM bank_orders WHERE status='paid'""", (today,))
+            summary = cur.fetchone()
+            cur.execute("""SELECT (paid_at AT TIME ZONE 'Asia/Seoul')::date AS day,
+                SUM(amount) AS amount,COUNT(*) AS orders FROM bank_orders
+                WHERE status='paid' AND (paid_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN %s AND %s
+                GROUP BY 1 ORDER BY 1""", (start_date, end_date))
+            daily = cur.fetchall()
+            cur.execute("""SELECT product_name, SUM(amount) AS amount,COUNT(*) AS orders
+                FROM bank_orders WHERE status='paid' AND (paid_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN %s AND %s
+                GROUP BY product_name ORDER BY amount DESC LIMIT 20""", (start_date, end_date))
+            ranking = cur.fetchall()
+            cur.execute("""SELECT * FROM bank_orders WHERE status='paid'
+                AND (paid_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN %s AND %s
+                ORDER BY paid_at DESC LIMIT 100""", (start_date, end_date))
+            recent = cur.fetchall()
+    finally:
+        conn.close()
+    return render_template("admin_sales.html", summary=summary, daily=daily,
+                           ranking=ranking, recent=recent, start_date=start_date, end_date=end_date)
 
 
 # ==================================================
