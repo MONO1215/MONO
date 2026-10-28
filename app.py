@@ -632,6 +632,37 @@ def product_description_image(product_id):
 
 
 # ==================================================
+# 회원가입 아이디 중복 확인
+# ==================================================
+
+@app.route("/check_username", methods=["POST"])
+def check_username():
+    data = request.get_json(silent=True) or {}
+    if not session.get("register_csrf") or data.get("csrf_token") != session.get("register_csrf"):
+        return jsonify(ok=False, message="페이지를 새로고침해 주세요."), 403
+
+    username = str(data.get("username") or "").strip()
+    session.pop("checked_register_username", None)
+    if not username:
+        return jsonify(ok=False, message="아이디를 입력해 주세요."), 400
+    if len(username) > 50:
+        return jsonify(ok=False, message="아이디는 50자 이내로 입력해 주세요."), 400
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM users WHERE username = %s LIMIT 1", (username,))
+            exists = cur.fetchone() is not None
+    finally:
+        conn.close()
+
+    if exists:
+        return jsonify(ok=True, available=False, message="이미 사용 중인 아이디입니다.")
+    session["checked_register_username"] = username
+    return jsonify(ok=True, available=True, message="사용 가능한 아이디입니다.")
+
+
+# ==================================================
 # 일반 회원가입
 # ==================================================
 
@@ -640,6 +671,9 @@ def product_description_image(product_id):
     methods=["GET", "POST"]
 )
 def register():
+
+    if "register_csrf" not in session:
+        session["register_csrf"] = token_urlsafe(32)
 
     error = None
 
@@ -684,6 +718,12 @@ def register():
 
         elif not username:
             error = "아이디를 입력해주세요."
+        elif len(username) > 50:
+            error = "아이디는 50자 이내로 입력해주세요."
+        elif request.form.get("register_csrf") != session.get("register_csrf"):
+            error = "페이지를 새로고침한 후 다시 시도해 주세요."
+        elif session.get("checked_register_username") != username:
+            error = "아이디 중복 확인을 먼저 진행해 주세요."
 
         elif not postal_code or not address:
             error = "우편번호와 배송지 주소를 입력해주세요."
@@ -793,14 +833,16 @@ def register():
                 conn.close()
 
             if error is None:
-
+                session.pop("checked_register_username", None)
+                session.pop("register_csrf", None)
                 return redirect(
                     url_for("login")
                 )
 
     return render_template(
         "register.html",
-        error=error
+        error=error,
+        register_csrf=session["register_csrf"]
     )
 
 

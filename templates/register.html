@@ -48,7 +48,8 @@
         {% endif %}
 
 
-        <form method="POST">
+        <form method="POST" id="mono_register_form">
+            <input type="hidden" name="register_csrf" value="{{ register_csrf }}">
 
 
             <div class="user-login-field">
@@ -72,12 +73,20 @@
                     아이디
                 </label>
 
-                <input
-                    type="text"
-                    name="username"
-                    autocomplete="username"
-                    required
-                >
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <input
+                        id="register_username"
+                        type="text"
+                        name="username"
+                        autocomplete="username"
+                        maxlength="50"
+                        value="{{ request.form.get('username', '') }}"
+                        required
+                        style="min-width:0;flex:1;"
+                    >
+                    <button id="check_username_button" type="button" onclick="checkMonoUsername()" style="padding:11px;border:1px solid #ddd;border-radius:7px;background:#fff;white-space:nowrap;cursor:pointer;">중복 확인</button>
+                </div>
+                <div id="username_check_message" role="status" aria-live="polite" style="margin-top:7px;font-size:13px;"></div>
 
             </div>
 
@@ -199,6 +208,71 @@ function searchMonoAddress() {
         form.elements['address_detail'].focus();
     }}).open();
 }
+</script>
+
+<script>
+(function () {
+    const input = document.getElementById('register_username');
+    const message = document.getElementById('username_check_message');
+    const button = document.getElementById('check_username_button');
+    const form = document.getElementById('mono_register_form');
+    let verifiedUsername = null;
+    let requestSerial = 0;
+
+    function showMessage(text, success) {
+        message.textContent = text;
+        message.style.color = success ? '#147d38' : '#c62828';
+    }
+
+    input.addEventListener('input', function () {
+        verifiedUsername = null;
+        requestSerial++;
+        showMessage('아이디 중복 확인을 진행해 주세요.', false);
+    });
+
+    window.checkMonoUsername = async function () {
+        const username = input.value.trim();
+        verifiedUsername = null;
+        if (!username) {
+            showMessage('아이디를 입력해 주세요.', false);
+            input.focus();
+            return;
+        }
+        const serial = ++requestSerial;
+        button.disabled = true;
+        showMessage('중복 확인 중...', false);
+        try {
+            const response = await fetch('{{ url_for("check_username") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: username,
+                    csrf_token: form.elements['register_csrf'].value
+                })
+            });
+            const data = await response.json();
+            if (serial !== requestSerial || input.value.trim() !== username) return;
+            if (response.ok && data.available === true) {
+                verifiedUsername = username;
+                showMessage('✓ ' + data.message, true);
+            } else {
+                showMessage(data.message || '중복 확인에 실패했습니다.', false);
+            }
+        } catch (error) {
+            if (serial === requestSerial) showMessage('네트워크 오류가 발생했습니다. 다시 시도해 주세요.', false);
+        } finally {
+            button.disabled = false;
+        }
+    };
+
+    form.addEventListener('submit', function (event) {
+        if (verifiedUsername !== input.value.trim()) {
+            event.preventDefault();
+            showMessage('아이디 중복 확인을 먼저 진행해 주세요.', false);
+            input.focus();
+        }
+    });
+})();
 </script>
 </body>
 
