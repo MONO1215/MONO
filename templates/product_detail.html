@@ -80,7 +80,7 @@
                 <h2>상품 옵션</h2>
                 <label for="mono-option-select">옵션 선택</label>
                 <select id="mono-option-select" class="mono-option-select" aria-label="상품 옵션 선택">
-                    {% if product['smartstore_price'] is not none or product['coupang_price'] is not none or product['smartstore_url'] or product['coupang_url'] or product.get('bank_transfer_price') is not none %}
+                    {% if product.get('bank_transfer_price') is not none %}
                         <option value="base">기본 상품</option>
                     {% endif %}
                     {% for option in options %}
@@ -140,20 +140,12 @@
         base: {
             name: '기본 상품',
             option_id: null,
-            smartstore_price: {{ product['smartstore_price'] | tojson }},
-            smartstore_url: {{ product['smartstore_url'] | tojson }},
-            coupang_price: {{ product['coupang_price'] | tojson }},
-            coupang_url: {{ product['coupang_url'] | tojson }},
             bank_transfer_price: {{ product.get('bank_transfer_price') | tojson }}
         },
         {% for option in options %}
         'option-{{ loop.index0 }}': {
             name: {{ option['option_name'] | tojson }},
             option_id: {{ option['id'] | tojson }},
-            smartstore_price: {{ option['smartstore_price'] | tojson }},
-            smartstore_url: {{ option['smartstore_url'] | tojson }},
-            coupang_price: {{ option['coupang_price'] | tojson }},
-            coupang_url: {{ option['coupang_url'] | tojson }},
             bank_transfer_price: {{ option.get('bank_transfer_price') | tojson }}
         }{% if not loop.last %},{% endif %}
         {% endfor %}
@@ -238,11 +230,7 @@
         if (!chosen) return;
         selectedLabel.textContent = '선택한 옵션: ' + chosen.name;
         let visible = 0;
-        const stores = [
-            {name:'스마트스토어', price:chosen.smartstore_price, url:chosen.smartstore_url, type:'external'},
-            {name:'쿠팡', price:chosen.coupang_price, url:chosen.coupang_url, type:'external'},
-            {name:'계좌이체', price:chosen.bank_transfer_price, type:'bank'}
-        ];
+        const stores = [{name:'계좌이체', price:chosen.bank_transfer_price, type:'bank'}];
         for (const store of stores) {
             if (store.type === 'external' && store.price === null && !store.url) continue;
             visible++;

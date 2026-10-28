@@ -273,7 +273,7 @@
                                 </h2>
 
                                 <p>
-                                    옵션마다 가격과 구매 링크를 다르게 설정할 수 있습니다.
+                                    옵션마다 계좌이체 판매 가격을 설정할 수 있습니다.
                                 </p>
 
                             </div>
@@ -294,96 +294,24 @@
 <div class="option-row mono-basic-option">
 
                         <h3>기본 상품</h3>
-<p class="form-help">옵션을 선택하지 않는 고객에게 표시되는 기본 가격과 구매 링크입니다.</p>
+<p class="form-help">기본 계좌이체 판매 가격입니다.</p>
 
-
-                        <!-- 스마트스토어 -->
-
-                        <div class="store-box">
-
-                            <h3>
-                                스마트스토어
-                            </h3>
-
-                            <label>
-                                판매 가격
-                            </label>
-
-                            <div class="price-input">
-
-                                <input
-                                    type="number"
-                                    name="smartstore_price"
-                                    min="0"
-                                    placeholder="스마트스토어 가격"
-                                >
-
-                                <span>
-                                    원
-                                </span>
-
-                            </div>
-
-
-                            <label>
-                                구매 사이트 URL
-                            </label>
-
-                            <input
-                                type="url"
-                                name="smartstore_url"
-                                placeholder="https://smartstore.naver.com/..."
-                            >
-
-                        </div>
-
-
-
-                        <!-- 쿠팡 -->
 
                         
 
-<div class="store-box">
-
-                            <h3>
-                                쿠팡
-                            </h3>
-
-                            <label>
-                                판매 가격
-                            </label>
-
-                            <div class="price-input">
-
-                                <input
-                                    type="number"
-                                    name="coupang_price"
-                                    min="0"
-                                    placeholder="쿠팡 가격"
-                                >
-
-                                <span>
-                                    원
-                                </span>
-
-                            </div>
+                        
 
 
-                            <label>
-                                구매 사이트 URL
-                            </label>
 
-                            <input
-                                type="url"
-                                name="coupang_url"
-                                placeholder="https://www.coupang.com/..."
-                            >
+                        
 
-                        </div>
+                        
+
+
 
                     
 
-                        <!-- 계좌이체: 주문 기능은 추후 구현 -->
+                        <!-- 계좌이체 전용 -->
                         <div class="store-box">
                             <h3>계좌이체</h3>
                             <label>판매 가격</label>
@@ -391,7 +319,7 @@
                                 <input type="number" name="bank_transfer_price" min="0" step="1" placeholder="계좌이체 가격" >
                                 <span>원</span>
                             </div>
-                            <p class="form-help">주문하기 기능은 준비 중입니다.</p>
+                            
                         </div>
                     </div>
 
@@ -516,24 +444,10 @@
 
                             <div class="admin-product-price">
 
-                                {% if product["smartstore_price"] %}
-
-                                <span>
-                                    스마트스토어
-                                    {{ "{:,}".format(product["smartstore_price"]) }}원
-                                </span>
-
-                                {% endif %}
+                                
 
 
-                                {% if product["coupang_price"] %}
-
-                                <span>
-                                    쿠팡
-                                    {{ "{:,}".format(product["coupang_price"]) }}원
-                                </span>
-
-                                {% endif %}
+                                
 
                                 {% if product['bank_transfer_price'] is not none %}
                                 <span>계좌이체 {{ "{:,}".format(product['bank_transfer_price']) }}원</span>
@@ -697,90 +611,11 @@ function addOption() {
 
 
 
-        <div class="option-store-box">
-
-            <h4>
-                스마트스토어
-            </h4>
-
-            <div class="option-store-fields">
-
-                <div>
-
-                    <label>
-                        판매 가격
-                    </label>
-
-                    <input
-                        type="number"
-                        name="option_smartstore_price[]"
-                        min="0"
-                        placeholder="가격"
-                    >
-
-                </div>
-
-
-                <div>
-
-                    <label>
-                        구매 URL
-                    </label>
-
-                    <input
-                        type="url"
-                        name="option_smartstore_url[]"
-                        placeholder="스마트스토어 구매 URL"
-                    >
-
-                </div>
-
-            </div>
-
-        </div>
+        
 
 
 
-        <div class="option-store-box">
-
-            <h4>
-                쿠팡
-            </h4>
-
-            <div class="option-store-fields">
-
-                <div>
-
-                    <label>
-                        판매 가격
-                    </label>
-
-                    <input
-                        type="number"
-                        name="option_coupang_price[]"
-                        min="0"
-                        placeholder="가격"
-                    >
-
-                </div>
-
-
-                <div>
-
-                    <label>
-                        구매 URL
-                    </label>
-
-                    <input
-                        type="url"
-                        name="option_coupang_url[]"
-                        placeholder="쿠팡 구매 URL"
-                    >
-
-                </div>
-
-            </div>
-        </div>
+        
 
 
 

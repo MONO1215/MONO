@@ -1575,29 +1575,13 @@ def admin():
                 )
             )
 
-            option_smartstore_prices = (
-                request.form.getlist(
-                    "option_smartstore_price[]"
-                )
-            )
+            option_smartstore_prices = ["" for _ in option_names]
 
-            option_smartstore_urls = (
-                request.form.getlist(
-                    "option_smartstore_url[]"
-                )
-            )
+            option_smartstore_urls = ["" for _ in option_names]
 
-            option_coupang_prices = (
-                request.form.getlist(
-                    "option_coupang_price[]"
-                )
-            )
+            option_coupang_prices = ["" for _ in option_names]
 
-            option_coupang_urls = (
-                request.form.getlist(
-                    "option_coupang_url[]"
-                )
-            )
+            option_coupang_urls = ["" for _ in option_names]
 
             option_bank_transfer_prices = request.form.getlist(
                 "option_bank_transfer_price[]"
@@ -2081,29 +2065,13 @@ def edit_product(product_id):
                 )
             )
 
-            option_smartstore_prices = (
-                request.form.getlist(
-                    "option_smartstore_price[]"
-                )
-            )
+            option_smartstore_prices = ["" for _ in option_names]
 
-            option_smartstore_urls = (
-                request.form.getlist(
-                    "option_smartstore_url[]"
-                )
-            )
+            option_smartstore_urls = ["" for _ in option_names]
 
-            option_coupang_prices = (
-                request.form.getlist(
-                    "option_coupang_price[]"
-                )
-            )
+            option_coupang_prices = ["" for _ in option_names]
 
-            option_coupang_urls = (
-                request.form.getlist(
-                    "option_coupang_url[]"
-                )
-            )
+            option_coupang_urls = ["" for _ in option_names]
 
             option_bank_transfer_prices = request.form.getlist(
                 "option_bank_transfer_price[]"
