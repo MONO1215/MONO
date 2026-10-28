@@ -249,82 +249,13 @@
                 <!-- 가격 -->
 
                 <div class="store-prices">
-
-
-                    {% if product["smartstore_price"] %}
-
-                    <p>
-
-                        <span>
-                            스마트스토어
-                        </span>
-
-                        <strong>
-                            {{ "{:,}".format(
-                                product["smartstore_price"]
-                            ) }}원
-                        </strong>
-
-                    </p>
-
+                    {% if product["is_sold_out"] %}
+                    <p class="product-sold-out"><strong>품절</strong></p>
+                    {% elif product["bank_transfer_price"] is not none %}
+                    <p><strong>{{ "{:,}".format(product["bank_transfer_price"]) }}원</strong></p>
+                    {% else %}
+                    <p>가격 문의</p>
                     {% endif %}
-
-
-
-                    {% if product["coupang_price"] %}
-
-                    <p>
-
-                        <span>
-                            쿠팡
-                        </span>
-
-                        <strong>
-                            {{ "{:,}".format(
-                                product["coupang_price"]
-                            ) }}원
-                        </strong>
-
-                    </p>
-
-                    {% endif %}
-
-
-                </div>
-
-
-
-                <!-- 구매 버튼 -->
-
-                <div class="purchase-buttons">
-
-
-                    {% if product["smartstore_url"] %}
-
-                    <a
-                        href="{{ product['smartstore_url'] }}"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        스마트스토어
-                    </a>
-
-                    {% endif %}
-
-
-                    {% if product["coupang_url"] %}
-
-                    <a
-                        href="{{ product['coupang_url'] }}"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        쿠팡
-                    </a>
-
-                    {% endif %}
-
-
                 </div>
 
 

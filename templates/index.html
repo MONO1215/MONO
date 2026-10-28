@@ -193,54 +193,13 @@
                 ========================= -->
 
                 <div class="store-prices">
-
                     {% if product["is_sold_out"] %}
-
-                        <p class="product-sold-out">
-                            <strong>
-                                품절
-                            </strong>
-                        </p>
-
+                    <p class="product-sold-out"><strong>품절</strong></p>
+                    {% elif product["bank_transfer_price"] is not none %}
+                    <p><strong>{{ "{:,}".format(product["bank_transfer_price"]) }}원</strong></p>
                     {% else %}
-
-
-                        {% if product["smartstore_price"] %}
-
-                        <p>
-
-                            <span>
-                                스마트스토어
-                            </span>
-
-                            <strong>
-                                {{ "{:,}".format(product["smartstore_price"]) }}원
-                            </strong>
-
-                        </p>
-
-                        {% endif %}
-
-
-                        {% if product["coupang_price"] %}
-
-                        <p>
-
-                            <span>
-                                쿠팡
-                            </span>
-
-                            <strong>
-                                {{ "{:,}".format(product["coupang_price"]) }}원
-                            </strong>
-
-                        </p>
-
-                        {% endif %}
-
-
+                    <p>가격 문의</p>
                     {% endif %}
-
                 </div>
 
             </div>
