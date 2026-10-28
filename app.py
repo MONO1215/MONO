@@ -2296,6 +2296,113 @@ def delete_product(product_id):
 
 
 # ==================================================
+# 장바구니 / 바로 결제 (서버에서 가격 재확인)
+# ==================================================
+
+def cart_lines():
+    cart = session.get("mono_cart", [])
+    lines = []
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            for item in cart[:30]:
+                pid, oid, qty = item["product_id"], item.get("option_id"), item["quantity"]
+                cur.execute("SELECT id,name,image_url,bank_transfer_price,is_sold_out FROM products WHERE id=%s", (pid,))
+                product = cur.fetchone()
+                if not product or product["is_sold_out"]: continue
+                price, name = product["bank_transfer_price"], "기본 상품"
+                if oid is not None:
+                    cur.execute("SELECT option_name,bank_transfer_price FROM product_options WHERE id=%s AND product_id=%s", (oid,pid))
+                    opt=cur.fetchone()
+                    if not opt: continue
+                    price,name=opt["bank_transfer_price"],opt["option_name"]
+                if price is None or price <= 0: continue
+                lines.append(dict(product_id=pid,option_id=oid,product_name=product["name"],option_name=name,image_url=product["image_url"],price=price,quantity=qty,subtotal=price*qty))
+    finally: conn.close()
+    return lines
+
+@app.route("/cart")
+def view_cart():
+    lines=cart_lines()
+    return render_template("cart.html", lines=lines, total=sum(x["subtotal"] for x in lines), csrf=get_order_csrf())
+
+@app.route("/cart/add", methods=["POST"])
+def add_to_cart():
+    if request.form.get("csrf_token") != session.get("order_csrf") or not session.get("order_csrf"):
+        abort(403)
+    try:
+        pid=int(request.form["product_id"])
+        oid=int(request.form["option_id"]) if request.form.get("option_id") else None
+        qty=int(request.form.get("quantity",1))
+        if not (1<=qty<=20): raise ValueError()
+    except (ValueError, KeyError): abort(400)
+    cart=list(session.get("mono_cart",[]))
+    # 서버 가격 검증을 위해 선택 항목을 임시로 추가하여 확인
+    candidate={"product_id":pid,"option_id":oid,"quantity":qty}
+    previous=session.get("mono_cart",[])
+    session["mono_cart"]=[candidate]
+    valid=bool(cart_lines())
+    session["mono_cart"]=previous
+    if not valid: abort(400)
+    for item in cart:
+        if item["product_id"]==pid and item.get("option_id")==oid:
+            item["quantity"]=min(20,item["quantity"]+qty)
+            break
+    else:
+        if len(cart)>=30: abort(400)
+        cart.append(candidate)
+    session["mono_cart"]=cart
+    session.modified=True
+    return redirect(url_for("checkout") if request.form.get("mode")=="buy" else url_for("view_cart"))
+
+@app.route("/cart/update", methods=["POST"])
+def update_cart():
+    if request.form.get("csrf_token") != session.get("order_csrf"): abort(403)
+    try:
+        index=int(request.form.get("index"))
+        quantity=int(request.form.get("quantity"))
+    except (TypeError,ValueError): abort(400)
+    cart=list(session.get("mono_cart",[]))
+    if not 0<=index<len(cart) or not 0<=quantity<=20: abort(400)
+    if quantity==0: cart.pop(index)
+    else: cart[index]["quantity"]=quantity
+    session["mono_cart"]=cart
+    session.modified=True
+    return redirect(url_for("view_cart"))
+
+@app.route("/checkout", methods=["GET","POST"])
+def checkout():
+    lines=cart_lines()
+    if not lines: return redirect(url_for("view_cart"))
+    total=sum(x["subtotal"] for x in lines)
+    error=None
+    if request.method=="POST":
+        if request.form.get("csrf_token") != session.get("order_csrf"): abort(403)
+        if not BANK_ACCOUNT_NUMBER: error="계좌번호가 아직 등록되지 않아 주문할 수 없습니다."
+        depositor=request.form.get("depositor_name","").strip()
+        if not 1<=len(depositor)<=50: error="입금자명을 1~50자로 입력해 주세요."
+        if not error:
+            conn=get_db_connection()
+            try:
+                with conn.cursor() as cur:
+                    ids=[]
+                    for line in lines:
+                        # 기존 주문관리·매출집계와 호환되도록 수량 포함 합계로 저장
+                        cur.execute("""INSERT INTO bank_orders(product_id,product_name,option_name,depositor_name,amount)
+                          VALUES(%s,%s,%s,%s,%s) RETURNING id""",
+                          (line["product_id"],line["product_name"],line["option_name"] + (" × " + str(line["quantity"]) if line["quantity"]>1 else ""),depositor,line["subtotal"]))
+                        ids.append(cur.fetchone()["id"])
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
+            finally: conn.close()
+            session.pop("mono_cart",None)
+            return render_template("checkout_success.html", ids=ids, total=total)
+    return render_template("checkout.html", lines=lines,total=total,csrf=get_order_csrf(),account=BANK_ACCOUNT_NUMBER,error=error)
+
+
+# ==================================================
 # 계좌이체 주문 접수 / 관리자 주문 및 매출 관리
 # ==================================================
 

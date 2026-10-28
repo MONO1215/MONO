@@ -43,7 +43,7 @@
         <a href="/" class="logo">MONO</a>
         <nav>
             <a href="/">홈</a>
-            <a href="/products">전체상품</a>
+            <a href="/products">전체상품</a> <a href="{{ url_for('view_cart') }}">장바구니</a>
             <a href="/category/fashion">패션의류/잡화</a>
             <a href="/category/food">식품</a>
             <a href="/category/kitchen">주방용품</a>
@@ -89,6 +89,18 @@
                 </select>
                 <p class="mono-selected-option" id="mono-selected-option"></p>
                 <div id="mono-store-results" aria-live="polite"></div>
+                <form id="mono-cart-form" action="{{ url_for('add_to_cart') }}" method="post" style="margin-top:16px;">
+                    <input type="hidden" name="csrf_token" value="{{ order_csrf }}">
+                    <input type="hidden" name="product_id" value="{{ product['id'] }}">
+                    <input type="hidden" name="option_id" id="cart-option-id">
+                    <label for="cart-quantity">수량</label>
+                    <input type="number" id="cart-quantity" name="quantity" min="1" max="20" value="1" style="width:80px;padding:10px;margin:8px;">
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+                        <button class="mono-buy-link" name="mode" value="cart" type="submit">장바구니 담기</button>
+                        <button class="mono-buy-link" name="mode" value="buy" type="submit">바로 결제</button>
+                        <a class="mono-buy-link" href="{{ url_for('view_cart') }}" style="background:#666;">장바구니 보기</a>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -229,6 +241,11 @@
         results.replaceChildren();
         if (!select.options.length) { selectedLabel.textContent = '등록된 상품 옵션이 없습니다.'; return; }
         const chosen = optionData[select.value];
+        const cartForm = document.getElementById('mono-cart-form');
+        if (cartForm) {
+            cartForm.style.display = chosen && !isSoldOut && Number(chosen.bank_transfer_price) > 0 ? '' : 'none';
+            document.getElementById('cart-option-id').value = chosen && chosen.option_id !== null ? chosen.option_id : '';
+        }
         if (!chosen) return;
         selectedLabel.textContent = '선택한 옵션: ' + chosen.name;
         let visible = 0;
