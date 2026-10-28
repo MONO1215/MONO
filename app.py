@@ -328,6 +328,14 @@ def init_db():
                     refunded_at TIMESTAMPTZ
                 )
             """)
+            # 주문 시점의 배송지 스냅샷 (기존 주문은 NULL 유지)
+            cur.execute("ALTER TABLE bank_orders ADD COLUMN IF NOT EXISTS recipient_name VARCHAR(100)")
+            cur.execute("ALTER TABLE bank_orders ADD COLUMN IF NOT EXISTS recipient_phone VARCHAR(30)")
+            cur.execute("ALTER TABLE bank_orders ADD COLUMN IF NOT EXISTS postal_code VARCHAR(10)")
+            cur.execute("ALTER TABLE bank_orders ADD COLUMN IF NOT EXISTS address TEXT")
+            cur.execute("ALTER TABLE bank_orders ADD COLUMN IF NOT EXISTS address_detail TEXT")
+            cur.execute("ALTER TABLE bank_orders ADD COLUMN IF NOT EXISTS user_id INTEGER")
+
             # 기존 회원 정보를 유지하면서 배송지 컬럼 추가
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS postal_code VARCHAR(10)")
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT")
@@ -2417,36 +2425,73 @@ def update_cart():
     session.modified=True
     return redirect(url_for("view_cart"))
 
-@app.route("/checkout", methods=["GET","POST"])
+@app.route("/checkout", methods=["GET", "POST"])
 def checkout():
-    lines=cart_lines()
-    if not lines: return redirect(url_for("view_cart"))
-    total=sum(x["subtotal"] for x in lines)
-    error=None
-    if request.method=="POST":
-        if request.form.get("csrf_token") != session.get("order_csrf"): abort(403)
-        if not BANK_ACCOUNT_NUMBER: error="계좌번호가 아직 등록되지 않아 주문할 수 없습니다."
-        depositor=request.form.get("depositor_name","").strip()
-        if not 1<=len(depositor)<=50: error="입금자명을 1~50자로 입력해 주세요."
+    lines = cart_lines()
+    if not lines:
+        return redirect(url_for("view_cart"))
+    total = sum(x["subtotal"] for x in lines)
+    error = None
+    user = None
+    user_id = session.get("user_id") if session.get("user_logged_in") else None
+    if user_id:
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""SELECT id, name, phone, postal_code, address, address_detail
+                               FROM users WHERE id=%s""", (user_id,))
+                user = cur.fetchone()
+        finally:
+            conn.close()
+    if request.method == "POST":
+        if request.form.get("csrf_token") != session.get("order_csrf") or not session.get("order_csrf"):
+            abort(403)
+        if not BANK_ACCOUNT_NUMBER:
+            error = "계좌번호가 아직 등록되지 않아 주문할 수 없습니다."
+        depositor = request.form.get("depositor_name", "").strip()
+        recipient_name = request.form.get("recipient_name", "").strip()
+        recipient_phone = request.form.get("recipient_phone", "").strip()
+        postal_code = request.form.get("postal_code", "").strip()
+        address = request.form.get("address", "").strip()
+        address_detail = request.form.get("address_detail", "").strip()
+        if not 1 <= len(depositor) <= 50:
+            error = "입금자명을 1~50자로 입력해 주세요."
+        elif not 1 <= len(recipient_name) <= 100:
+            error = "받는 분 이름을 입력해 주세요."
+        elif not 1 <= len(recipient_phone) <= 30:
+            error = "받는 분 연락처를 입력해 주세요."
+        elif not re.fullmatch(r"[0-9]{5}", postal_code):
+            error = "우편번호 5자리를 입력해 주세요."
+        elif not address or len(address) > 300 or len(address_detail) > 300:
+            error = "배송지 주소를 정확히 입력해 주세요."
         if not error:
-            conn=get_db_connection()
+            conn = get_db_connection()
             try:
                 with conn.cursor() as cur:
-                    ids=[]
+                    ids = []
                     for line in lines:
-                        # 기존 주문관리·매출집계와 호환되도록 수량 포함 합계로 저장
-                        cur.execute("""INSERT INTO bank_orders(product_id,product_name,option_name,depositor_name,amount)
-                          VALUES(%s,%s,%s,%s,%s) RETURNING id""",
-                          (line["product_id"],line["product_name"],line["option_name"] + (" × " + str(line["quantity"]) if line["quantity"]>1 else ""),depositor,line["subtotal"]))
+                        # 기존 매출 집계와 호환되도록 상품별 주문을 유지하면서 배송지 저장
+                        cur.execute("""INSERT INTO bank_orders
+                            (product_id, product_name, option_name, depositor_name, amount,
+                             recipient_name, recipient_phone, postal_code, address, address_detail, user_id)
+                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+                            (line["product_id"], line["product_name"],
+                             line["option_name"] + (" × " + str(line["quantity"]) if line["quantity"] > 1 else ""),
+                             depositor, line["subtotal"], recipient_name, recipient_phone,
+                             postal_code, address, address_detail, user["id"] if user else None))
                         ids.append(cur.fetchone()["id"])
                 conn.commit()
             except Exception:
                 conn.rollback()
                 raise
-            finally: conn.close()
-            session.pop("mono_cart",None)
+            finally:
+                conn.close()
+            session.pop("mono_cart", None)
             return render_template("checkout_success.html", ids=ids, total=total)
-    return render_template("checkout.html", lines=lines,total=total,csrf=get_order_csrf(),account=BANK_ACCOUNT_NUMBER,error=error)
+    return render_template(
+        "checkout.html", lines=lines, total=total, csrf=get_order_csrf(),
+        account=BANK_ACCOUNT_NUMBER, error=error, user=user
+    )
 
 
 # ==================================================

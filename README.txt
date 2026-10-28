@@ -1,6 +1,8 @@
-MONO 배송지 주소 기능
-1. app.py를 프로젝트 루트에 덮어쓰기
-2. templates/register.html, templates/edit_profile.html 덮어쓰기
-3. 배포 시 기존 users 테이블에 postal_code, address, address_detail 컬럼이 자동 추가됩니다.
-4. 기존 회원은 내 정보 수정에서 주소를 입력해 저장할 수 있습니다.
-5. 현재 주문 checkout 및 bank_orders에는 배송지가 연동되지 않습니다. 별도 개발이 필요합니다.
+MONO 배송지 주문 연동
+
+파일: app.py, templates/register.html, templates/edit_profile.html, templates/checkout.html
+
+기능: 회원 배송지 자동 입력, 비회원 배송지 직접 입력, 주문별 배송지 저장.
+기존 bank_orders에는 새 배송지 컬럼이 자동 추가됩니다. 기존 주문 배송지 값은 NULL입니다.
+관리자 주문 목록 템플릿(admin_orders.html)은 제공되지 않아 화면 출력은 수정하지 않았습니다.
+주의: 실제 데이터베이스 연결 테스트 및 운영 배포는 수행하지 않았습니다.
