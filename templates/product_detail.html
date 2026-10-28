@@ -35,6 +35,14 @@
         .mono-copy-btn {margin-left:8px;border:1px solid #ccc;border-radius:5px;padding:5px 9px;background:white;cursor:pointer;}
         body.mono-modal-open {overflow:hidden;}
         @media(max-width:480px) {.mono-store-row{padding:14px;gap:10px}.mono-store-price{font-size:16px}.mono-buy-link{padding:11px 14px}}
+        .mono-purchase-panel {display:block; padding:20px;}
+        .mono-purchase-price {margin-bottom:16px;}
+        .mono-purchase-panel #mono-cart-form[hidden] {display:none;}
+        .mono-quantity-line {display:flex;align-items:center;gap:12px;margin:12px 0 16px;}
+        .mono-quantity-line input {width:84px;box-sizing:border-box;padding:10px;border:1px solid #aaa;border-radius:5px;font-size:16px;}
+        .mono-purchase-actions {display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+        .mono-view-cart {background:#666;}
+        @media(max-width:480px) {.mono-purchase-panel{padding:14px}.mono-purchase-actions{gap:8px}.mono-purchase-actions .mono-buy-link{flex:1;text-align:center;padding:12px 9px;}}
     </style>
 </head>
 <body>
@@ -89,19 +97,27 @@
                     {% endfor %}
                 </select>
                 <p class="mono-selected-option" id="mono-selected-option"></p>
-                <div id="mono-store-results" aria-live="polite"></div>
-                <form id="mono-cart-form" action="{{ url_for('add_to_cart') }}" method="post" style="margin-top:16px;">
-                    <input type="hidden" name="csrf_token" value="{{ order_csrf }}">
-                    <input type="hidden" name="product_id" value="{{ product['id'] }}">
-                    <input type="hidden" name="option_id" id="cart-option-id">
-                    <label for="cart-quantity">수량</label>
-                    <input type="number" id="cart-quantity" name="quantity" min="1" max="20" value="1" style="width:80px;padding:10px;margin:8px;">
-                    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
-                        <button class="mono-buy-link" name="mode" value="cart" type="submit">장바구니 담기</button>
-                        <button class="mono-buy-link" name="mode" value="buy" type="submit">바로 결제</button>
-                        <a class="mono-buy-link" href="{{ url_for('view_cart') }}" style="background:#666;">장바구니 보기</a>
+                <div class="mono-store-row mono-bank-transfer mono-purchase-panel" aria-live="polite">
+                    <div class="mono-purchase-price">
+                        <span class="mono-store-label">계좌이체</span>
+                        <strong class="mono-store-price" id="mono-current-price">가격 확인 중</strong>
+                        <p class="mono-bank-notice" id="mono-price-notice"></p>
                     </div>
-                </form>
+                    <form id="mono-cart-form" action="{{ url_for('add_to_cart') }}" method="post">
+                        <input type="hidden" name="csrf_token" value="{{ order_csrf }}">
+                        <input type="hidden" name="product_id" value="{{ product['id'] }}">
+                        <input type="hidden" name="option_id" id="cart-option-id">
+                        <div class="mono-quantity-line">
+                            <label for="cart-quantity">수량</label>
+                            <input type="number" id="cart-quantity" name="quantity" min="1" max="20" value="1" required>
+                        </div>
+                        <div class="mono-purchase-actions">
+                            <button class="mono-buy-link" name="mode" value="cart" type="submit">장바구니 담기</button>
+                            <button class="mono-buy-link" name="mode" value="buy" type="submit">바로 결제</button>
+                            <a class="mono-buy-link mono-view-cart" href="{{ url_for('view_cart') }}">장바구니 보기</a>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -120,35 +136,8 @@
 </main>
 <footer><p>© 2026 MONO. All rights reserved.</p></footer>
 
-<!-- 계좌이체 주문 접수 팝업 -->
-<div id="mono-bank-modal" class="mono-modal-backdrop" hidden>
-    <section class="mono-modal" role="dialog" aria-modal="true" aria-labelledby="mono-bank-modal-title" tabindex="-1">
-        <button type="button" class="mono-modal-close-x" id="mono-bank-x" aria-label="팝업 닫기">&times;</button>
-        <h2 id="mono-bank-modal-title">MONO 계좌이체 안내</h2>
-        <div class="mono-modal-field"><span class="mono-modal-label">상품 / 옵션</span><div class="mono-modal-value" id="mono-bank-product"></div></div>
-        <div class="mono-modal-field"><span class="mono-modal-label">은행</span><div class="mono-modal-value">카카오뱅크</div></div>
-        <div class="mono-modal-field">
-            <span class="mono-modal-label">계좌번호</span>
-            <div class="mono-modal-value"><span id="mono-bank-account">계좌번호 등록 예정</span><button type="button" class="mono-copy-btn" id="mono-bank-copy" hidden>복사</button></div>
-        </div>
-        <div class="mono-modal-field"><span class="mono-modal-label">예금주</span><div class="mono-modal-value">MONO</div></div>
-        <div class="mono-modal-field"><span class="mono-modal-label">입금 금액</span><div class="mono-modal-value mono-modal-amount" id="mono-bank-amount"></div></div>
-        <div class="mono-modal-field"><label for="mono-depositor-name">입금자명</label><input id="mono-depositor-name" class="mono-modal-input" type="text" maxlength="50" autocomplete="off" placeholder="입금자명을 입력하세요"></div>
-        <div class="mono-modal-notice" id="mono-bank-notice">계좌번호가 아직 등록되지 않아 입금할 수 없습니다. 현재 주문 접수 및 입금 확인 기능은 제공되지 않습니다.</div>
-        <div class="mono-modal-actions">
-            <button type="button" id="mono-bank-complete" class="mono-modal-primary" disabled>입금 완료</button>
-            <button type="button" id="mono-bank-close" class="mono-modal-secondary">닫기</button>
-        </div>
-    </section>
-</div>
 <script>
     const isSoldOut = {{ product['is_sold_out'] | tojson }};
-    const productName = {{ product['name'] | tojson }};
-    // 계좌번호가 확정되면 아래 빈 문자열을 실제 번호로 변경하세요.
-    // 계좌번호가 없는 동안에는 '입금 완료' 버튼이 비활성화됩니다.
-    const BANK_ACCOUNT_NUMBER = {{ bank_account_number | tojson }};
-    const ORDER_CSRF = {{ order_csrf | tojson }};
-    const PRODUCT_ID = {{ product["id"] | tojson }};
     const optionData = {
         base: {
             name: '기본 상품',
@@ -165,135 +154,22 @@
     };
     const select = document.getElementById('mono-option-select');
     const requestedOption = new URLSearchParams(window.location.search).get('option');
-    if (requestedOption && [...select.options].some(item => item.value === requestedOption)) { select.value = requestedOption; }
-    const selectedLabel = document.getElementById('mono-selected-option');
-    const results = document.getElementById('mono-store-results');
-    const modal = document.getElementById('mono-bank-modal');
-    const modalPanel = modal.querySelector('.mono-modal');
-    const depositorInput = document.getElementById('mono-depositor-name');
-    const completeButton = document.getElementById('mono-bank-complete');
-    const copyButton = document.getElementById('mono-bank-copy');
-    let previousFocus = null;
-    let activeOption = null;
-
-    function formatPrice(value) {
-        return value === null || value === undefined ? '가격 미등록' : Number(value).toLocaleString('ko-KR') + '원';
+    if (requestedOption && [...select.options].some(item => item.value === requestedOption)) {
+        select.value = requestedOption;
     }
-    function openBankModal(chosen) {
-        if (isSoldOut || chosen.bank_transfer_price === null || chosen.bank_transfer_price === undefined) return;
-        previousFocus = document.activeElement;
-        activeOption = chosen;
-        document.getElementById('mono-bank-product').textContent = productName + ' / ' + chosen.name;
-        document.getElementById('mono-bank-amount').textContent = formatPrice(chosen.bank_transfer_price);
-        document.getElementById('mono-bank-account').textContent = BANK_ACCOUNT_NUMBER || '계좌번호 등록 예정';
-        copyButton.hidden = !BANK_ACCOUNT_NUMBER;
-        completeButton.disabled = !BANK_ACCOUNT_NUMBER;
-        depositorInput.value = '';
-        document.getElementById('mono-bank-notice').textContent = BANK_ACCOUNT_NUMBER
-            ? '실제 입금 후 입금 완료를 눌러 신고해 주세요. 입금 여부는 관리자가 별도로 확인합니다.'
-            : '계좌번호가 아직 등록되지 않아 입금할 수 없습니다. 현재 주문 접수 및 입금 확인 기능은 제공되지 않습니다.';
-        modal.hidden = false;
-        document.body.classList.add('mono-modal-open');
-        modalPanel.focus();
-    }
-    function closeBankModal() {
-        modal.hidden = true;
-        document.body.classList.remove('mono-modal-open');
-        if (previousFocus && previousFocus.isConnected) previousFocus.focus();
-    }
-    document.getElementById('mono-bank-x').addEventListener('click', closeBankModal);
-    document.getElementById('mono-bank-close').addEventListener('click', closeBankModal);
-    modal.addEventListener('click', (event) => { if (event.target === modal) closeBankModal(); });
-    document.addEventListener('keydown', (event) => {
-        if (modal.hidden) return;
-        if (event.key === 'Escape') closeBankModal();
-        if (event.key === 'Tab') {
-            const focusables = [...modalPanel.querySelectorAll('button:not([disabled]):not([hidden]),input:not([disabled])')];
-            const first = focusables[0], last = focusables[focusables.length - 1];
-            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-        }
-    });
-    copyButton.addEventListener('click', async () => {
-        if (!BANK_ACCOUNT_NUMBER) return;
-        try { await navigator.clipboard.writeText(BANK_ACCOUNT_NUMBER); copyButton.textContent = '복사됨'; }
-        catch { window.alert('계좌번호 복사에 실패했습니다.'); }
-        setTimeout(() => { copyButton.textContent = '복사'; }, 1500);
-    });
-    completeButton.addEventListener('click', async () => {
-        if (!BANK_ACCOUNT_NUMBER || !activeOption) return;
-        const depositor = depositorInput.value.trim();
-        if (!depositor) { window.alert('입금자명을 입력해 주세요.'); depositorInput.focus(); return; }
-        completeButton.disabled = true;
-        try {
-            const response = await fetch({{ url_for('create_bank_order') | tojson }}, {
-                method: 'POST', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({csrf_token: ORDER_CSRF, product_id: PRODUCT_ID,
-                    option_id: activeOption.option_id, depositor_name: depositor})
-            });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || '접수에 실패했습니다.');
-            window.alert('입금 신고 접수 완료! 주문번호: ' + data.order_id + '\n실제 입금 확인 후 결제 완료 처리됩니다.');
-            closeBankModal();
-        } catch (error) { window.alert(error.message); }
-        finally { completeButton.disabled = !BANK_ACCOUNT_NUMBER; }
-    });
     function renderOption() {
-        results.replaceChildren();
-        if (!select.options.length) { selectedLabel.textContent = '등록된 상품 옵션이 없습니다.'; return; }
         const chosen = optionData[select.value];
-        const cartForm = document.getElementById('mono-cart-form');
-        if (cartForm) {
-            cartForm.style.display = chosen && !isSoldOut && Number(chosen.bank_transfer_price) > 0 ? '' : 'none';
-            document.getElementById('cart-option-id').value = chosen && chosen.option_id !== null ? chosen.option_id : '';
-        }
-        if (!chosen) return;
-        selectedLabel.textContent = '선택한 옵션: ' + chosen.name;
-        let visible = 0;
-        const stores = [{name:'계좌이체', price:chosen.bank_transfer_price, type:'bank'}];
-        for (const store of stores) {
-            if (store.type === 'external' && store.price === null && !store.url) continue;
-            visible++;
-            const row = document.createElement('div');
-            row.className = 'mono-store-row' + (store.type === 'bank' ? ' mono-bank-transfer' : '');
-            const info = document.createElement('div');
-            const label = document.createElement('span');
-            label.className = 'mono-store-label';
-            label.textContent = store.name;
-            const price = document.createElement('strong');
-            price.className = 'mono-store-price';
-            price.textContent = isSoldOut ? '품절' : formatPrice(store.price);
-            info.append(label, price);
-            if (store.type === 'bank') {
-                const notice = document.createElement('p');
-                notice.className = 'mono-bank-notice';
-                notice.textContent = BANK_ACCOUNT_NUMBER ? '계좌이체 안내 확인' : '계좌번호 등록 예정';
-                info.appendChild(notice);
-                const button = document.createElement('button');
-                button.type = 'button';
-                button.className = 'mono-buy-link';
-                button.textContent = isSoldOut ? '품절' : '주문하기';
-                button.disabled = isSoldOut || store.price === null || store.price === undefined;
-                button.addEventListener('click', () => openBankModal(chosen));
-                row.append(info, button);
-            } else {
-                const link = document.createElement('a');
-                link.className = 'mono-buy-link';
-                const validUrl = /^https?:\/\//i.test(store.url || '');
-                if (isSoldOut || !validUrl) {
-                    link.textContent = isSoldOut ? '품절' : '이동 불가';
-                    link.setAttribute('aria-disabled', 'true');
-                } else {
-                    link.textContent = '이동하기';
-                    link.href = store.url;
-                    link.target = '_blank';
-                    link.rel = 'noopener noreferrer';
-                }
-                row.append(info, link);
-            }
-            results.appendChild(row);
-        }
-        if (!visible) { const msg = document.createElement('p'); msg.className = 'mono-no-store'; msg.textContent = '선택한 옵션의 구매 정보가 없습니다.'; results.appendChild(msg); }
+        const price = document.getElementById('mono-current-price');
+        const notice = document.getElementById('mono-price-notice');
+        const form = document.getElementById('mono-cart-form');
+        const selectedLabel = document.getElementById('mono-selected-option');
+        const validPrice = chosen && chosen.bank_transfer_price !== null &&
+            chosen.bank_transfer_price !== undefined && Number(chosen.bank_transfer_price) > 0;
+        document.getElementById('cart-option-id').value = chosen && chosen.option_id !== null ? chosen.option_id : '';
+        selectedLabel.textContent = chosen ? '선택한 옵션: ' + chosen.name : '등록된 상품 옵션이 없습니다.';
+        price.textContent = isSoldOut ? '품절' : (validPrice ? Number(chosen.bank_transfer_price).toLocaleString('ko-KR') + '원' : '가격 문의');
+        notice.textContent = isSoldOut ? '현재 구매할 수 없는 상품입니다.' : (!validPrice ? '판매가가 등록되지 않았습니다.' : '');
+        form.hidden = isSoldOut || !validPrice;
     }
     select.addEventListener('change', renderOption);
     renderOption();
