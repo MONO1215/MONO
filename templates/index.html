@@ -15,6 +15,11 @@
         rel="stylesheet"
         href="{{ url_for('static', filename='css/style.css') }}"
     >
+<style>
+.mono-listing-prices p {display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;margin:5px 0;font-size:13px;line-height:1.5;}
+.mono-listing-prices p span {color:#555;overflow-wrap:anywhere;}
+.mono-listing-prices p strong {white-space:nowrap;color:#111;}
+</style>
 </head>
 
 
@@ -137,74 +142,29 @@
         <div class="product-grid">
 
             {% for product in products %}
-
+            {% for option in [none] + product["listing_options"] %}
             <div class="product-card">
-
-                <a
-                    href="{{ url_for(
-                        'product_detail',
-                        product_id=product['id']
-                    ) }}"
-                    class="product-main-link"
-                >
-
-                    {% if product["image_file"] %}
-
-                    <img
-                        class="product-image-real"
-                        src="{{ url_for(
-                            'static',
-                            filename='uploads/products/' + product['image_file']
-                        ) }}"
-                        alt="{{ product['name'] }}"
-                    >
-
-                    {% elif product["image_url"] %}
-
-                    <img
-                        class="product-image-real"
-                        src="{{ product['image_url'] }}"
-                        alt="{{ product['name'] }}"
-                    >
-
+                <a href="{{ url_for('product_detail', product_id=product['id'], option=('base' if option is none else 'option-' ~ option['id'])) }}" class="product-main-link">
+                    {% if product['image_file'] %}
+                    <img class="product-image-real" src="{{ url_for('static', filename='uploads/products/' + product['image_file']) }}" alt="{{ product['name'] }}">
+                    {% elif product['image_url'] %}
+                    <img class="product-image-real" src="{{ product['image_url'] }}" alt="{{ product['name'] }}">
                     {% else %}
-
-                    <div class="product-image">
-                        상품 이미지
-                    </div>
-
+                    <div class="product-image">상품 이미지</div>
                     {% endif %}
-
-
-                    <p class="product-category">
-                        {{ product["category"] }}
-                    </p>
-
-
-                    <h3>
-                        {{ product["name"] }}
-                    </h3>
-
+                    <p class="product-category">{{ product['category'] }}</p>
+                    <h3>{{ product['name'] }}{% if option is not none %} - {{ option['option_name'] }}{% endif %}</h3>
                 </a>
-
-
-                <!-- =========================
-                     가격 / 품절
-                ========================= -->
-
                 <div class="store-prices">
-                    {% if product["is_sold_out"] %}
+                    {% if product['is_sold_out'] %}
                     <p class="product-sold-out"><strong>품절</strong></p>
-                    {% elif product["bank_transfer_price"] is not none %}
-                    <p><strong>{{ "{:,}".format(product["bank_transfer_price"]) }}원</strong></p>
                     {% else %}
-                    <p>가격 문의</p>
+                        {% set price = product['bank_transfer_price'] if option is none else option['bank_transfer_price'] %}
+                        <p><strong>{{ '{:,}'.format(price) ~ '원' if price is not none else '가격 문의' }}</strong></p>
                     {% endif %}
                 </div>
-
             </div>
-
-
+            {% endfor %}
             {% else %}
 
             <p>

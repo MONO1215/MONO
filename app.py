@@ -354,6 +354,25 @@ def ensure_database():
         _db_initialized = True
 
 
+
+
+def attach_listing_options(cur, products):
+    """상품 목록에 옵션별 계좌이체 가격을 한 번의 조회로 연결."""
+    if not products:
+        return
+    product_ids = [p["id"] for p in products]
+    cur.execute("""
+        SELECT id, product_id, option_name, bank_transfer_price
+        FROM product_options
+        WHERE product_id = ANY(%s)
+        ORDER BY id ASC
+    """, (product_ids,))
+    by_product = {pid: [] for pid in product_ids}
+    for option in cur.fetchall():
+        by_product[option["product_id"]].append(option)
+    for product in products:
+        product["listing_options"] = by_product[product["id"]]
+
 # ==================================================
 # 메인
 # ==================================================
@@ -374,6 +393,7 @@ def home():
             """)
 
             products = cur.fetchall()
+            attach_listing_options(cur, products)
 
     finally:
         conn.close()
@@ -404,6 +424,7 @@ def all_products():
             """)
 
             products = cur.fetchall()
+            attach_listing_options(cur, products)
 
     finally:
         conn.close()
@@ -446,6 +467,7 @@ def category_page(category_slug):
             ))
 
             products = cur.fetchall()
+            attach_listing_options(cur, products)
 
     finally:
         conn.close()
