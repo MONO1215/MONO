@@ -43,7 +43,7 @@
         <a href="/" class="logo">MONO</a>
         <nav>
             <a href="/">홈</a>
-            <a href="/products">전체상품</a> <a href="{{ url_for('view_cart') }}">장바구니</a>
+            <a href="/products">전체상품</a>
             <a href="/category/fashion">패션의류/잡화</a>
             <a href="/category/food">식품</a>
             <a href="/category/kitchen">주방용품</a>
@@ -52,6 +52,7 @@
             <a href="/category/car">자동차용품</a>
             <a href="/category/office">사무용품</a>
             <a href="/category/sports">스포츠용품</a>
+            <a href="{{ url_for('view_cart') }}">장바구니</a>
             {% if session.get('user_logged_in') %}
                 <a href="{{ url_for('profile') }}" class="user-header-name">{{ session.get('username') }}님</a>
                 <a href="{{ url_for('logout') }}">로그아웃</a>
