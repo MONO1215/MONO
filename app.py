@@ -1,4 +1,5 @@
 import traceback
+import re
 from supabase import create_client
 from uuid import uuid4
 from secrets import token_urlsafe
@@ -327,6 +328,11 @@ def init_db():
                     refunded_at TIMESTAMPTZ
                 )
             """)
+            # 기존 회원 정보를 유지하면서 배송지 컬럼 추가
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS postal_code VARCHAR(10)")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS address_detail TEXT")
+
             cur.execute("CREATE INDEX IF NOT EXISTS idx_bank_orders_status ON bank_orders(status)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_bank_orders_paid_at ON bank_orders(paid_at)")
 
@@ -646,6 +652,10 @@ def register():
             ""
         ).strip()
 
+        postal_code = request.form.get("postal_code", "").strip()
+        address = request.form.get("address", "").strip()
+        address_detail = request.form.get("address_detail", "").strip()
+
         email = request.form.get(
             "email",
             ""
@@ -667,6 +677,12 @@ def register():
         elif not username:
             error = "아이디를 입력해주세요."
 
+        elif not postal_code or not address:
+            error = "우편번호와 배송지 주소를 입력해주세요."
+        elif not re.fullmatch(r"[0-9]{5}", postal_code):
+            error = "우편번호는 5자리 숫자로 입력해주세요."
+        elif len(address) > 300 or len(address_detail) > 300:
+            error = "주소는 각 300자 이내로 입력해주세요."
         elif not email:
             error = "이메일을 입력해주세요."
 
@@ -732,9 +748,15 @@ def register():
                                     username,
                                     phone,
                                     email,
-                                    password_hash
+                                    password_hash,
+                                    postal_code,
+                                    address,
+                                    address_detail
                                 )
                                 VALUES (
+                                    %s,
+                                    %s,
+                                    %s,
                                     %s,
                                     %s,
                                     %s,
@@ -746,7 +768,10 @@ def register():
                                 username,
                                 phone,
                                 email,
-                                password_hash
+                                password_hash,
+                                postal_code,
+                                address,
+                                address_detail
                             ))
 
                             conn.commit()
@@ -898,6 +923,9 @@ def profile():
                     username,
                     phone,
                     email,
+                    postal_code,
+                    address,
+                    address_detail,
                     level,
                     point,
                     exp,
@@ -978,6 +1006,9 @@ def edit_profile():
                     username,
                     phone,
                     email,
+                    postal_code,
+                    address,
+                    address_detail,
                     password_hash
                 FROM users
                 WHERE id = %s
@@ -1025,6 +1056,10 @@ def edit_profile():
                 ""
             ).strip()
 
+            postal_code = request.form.get("postal_code", "").strip()
+            address = request.form.get("address", "").strip()
+            address_detail = request.form.get("address_detail", "").strip()
+
             current_password = request.form.get(
                 "current_password",
                 ""
@@ -1033,6 +1068,12 @@ def edit_profile():
             if not name:
                 error = "이름을 입력해주세요."
 
+            elif not postal_code or not address:
+                error = "우편번호와 배송지 주소를 입력해주세요."
+            elif not re.fullmatch(r"[0-9]{5}", postal_code):
+                error = "우편번호는 5자리 숫자로 입력해주세요."
+            elif len(address) > 300 or len(address_detail) > 300:
+                error = "주소는 각 300자 이내로 입력해주세요."
             elif not email:
                 error = "이메일을 입력해주세요."
 
@@ -1077,12 +1118,18 @@ def edit_profile():
                         SET
                             name = %s,
                             phone = %s,
-                            email = %s
+                            email = %s,
+                            postal_code = %s,
+                            address = %s,
+                            address_detail = %s
                         WHERE id = %s
                     """, (
                         name,
                         phone,
                         email,
+                        postal_code,
+                        address,
+                        address_detail,
                         user_id
                     ))
 

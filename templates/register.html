@@ -97,6 +97,23 @@
             </div>
 
 
+
+            <div class="user-login-field">
+                <label for="postal_code">우편번호</label>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <input id="postal_code" type="text" name="postal_code" maxlength="5" pattern="[0-9]{5}" inputmode="numeric" placeholder="우편번호" value="{{ request.form.get('postal_code', '') }}" required style="min-width:0;flex:1;">
+                    <button type="button" onclick="searchMonoAddress()" style="padding:11px;border:1px solid #ddd;border-radius:7px;background:#fff;white-space:nowrap;">주소 검색</button>
+                </div>
+            </div>
+            <div class="user-login-field">
+                <label for="address">배송지 주소</label>
+                <input id="address" type="text" name="address" maxlength="300" placeholder="기본 주소" value="{{ request.form.get('address', '') }}" required>
+            </div>
+            <div class="user-login-field">
+                <label for="address_detail">상세 주소</label>
+                <input id="address_detail" type="text" name="address_detail" maxlength="300" placeholder="동·호수 등" value="{{ request.form.get('address_detail', '') }}">
+            </div>
+
             <div class="user-login-field">
 
                 <label>
@@ -167,6 +184,22 @@
 </div>
 
 
+
+<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+<script>
+function searchMonoAddress() {
+    if (!window.daum || !daum.Postcode) {
+        alert('주소 검색 서비스를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
+        return;
+    }
+    new daum.Postcode({oncomplete: function(data) {
+        const form = document.querySelector('form');
+        form.elements['postal_code'].value = data.zonecode;
+        form.elements['address'].value = data.roadAddress || data.jibunAddress;
+        form.elements['address_detail'].focus();
+    }}).open();
+}
+</script>
 </body>
 
 </html>
