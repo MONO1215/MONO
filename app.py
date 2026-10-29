@@ -330,6 +330,8 @@ def init_db():
                     refunded_at TIMESTAMPTZ
                 )
             """)
+            # 신규 주문 수량을 별도 저장 (기존 주문은 옵션명 끝의 × 수량으로 집계)
+            cur.execute("ALTER TABLE bank_orders ADD COLUMN IF NOT EXISTS quantity INTEGER")
             # 주문 시점의 배송지 스냅샷 (기존 주문은 NULL 유지)
             cur.execute("ALTER TABLE bank_orders ADD COLUMN IF NOT EXISTS recipient_name VARCHAR(100)")
             cur.execute("ALTER TABLE bank_orders ADD COLUMN IF NOT EXISTS recipient_phone VARCHAR(30)")
@@ -445,32 +447,49 @@ def attach_listing_options(cur, products):
 
 @app.route("/")
 def home():
-
+    # 결제 완료된 계좌이체 주문의 상품별 실제 판매 수량 순위.
+    # 구형 주문은 option_name 끝의 ' × N' 패턴을 이용한다.
     conn = get_db_connection()
-
     try:
-
         with conn.cursor() as cur:
-
             cur.execute("""
-                SELECT *
-                FROM products
-                ORDER BY id DESC
+                WITH sold AS (
+                    SELECT product_id,
+                           SUM(COALESCE(quantity,
+                               CASE WHEN option_name ~ ' × [0-9]+$'
+                                    THEN (substring(option_name FROM ' × ([0-9]+)$'))::INTEGER
+                                    ELSE 1 END)) AS units,
+                           MAX(paid_at) AS last_paid
+                    FROM bank_orders
+                    WHERE status = 'paid' AND product_id IS NOT NULL
+                    GROUP BY product_id
+                )
+                SELECT p.* FROM sold s
+                JOIN products p ON p.id = s.product_id
+                ORDER BY s.units DESC, s.last_paid DESC NULLS LAST, p.id DESC
+                LIMIT 20
             """)
-
             products = cur.fetchall()
             attach_listing_options(cur, products)
-
     finally:
         conn.close()
-
     if not session.get("user_logged_in"):
         products = mask_public_prices(products)
+    return render_template("index.html", products=products, home_top20=True)
 
-    return render_template(
-        "index.html",
-        products=products
-    )
+
+@app.route("/events/<event_key>")
+def event_page(event_key):
+    pages = {
+        "purchase-review": ("구매 인증", "구매 후기·인증 기능을 준비 중입니다."),
+        "roulette": ("랜덤 룰렛", "룰렛 이벤트를 준비 중입니다. 아직 참여하거나 포인트를 받을 수 없습니다."),
+        "support": ("고객센터", "문의 및 상담 접수 기능을 준비 중입니다."),
+        "specials": ("특가 상품", "특가 상품 등록 기능을 준비 중입니다."),
+    }
+    if event_key not in pages:
+        abort(404)
+    title, message = pages[event_key]
+    return render_template("event_page.html", title=title, message=message)
 
 
 # ==================================================
@@ -503,7 +522,7 @@ def all_products():
 
     return render_template(
         "index.html",
-        products=products
+        products=products, home_top20=False
     )
 
 
@@ -2906,7 +2925,7 @@ def checkout():
                                 cash = gross - applied
                                 order_status = 'paid' if cash == 0 else 'reported'
                                 cur.execute("""INSERT INTO bank_orders
-                                    (product_id, product_name, option_name, depositor_name,
+                                    (product_id, product_name, option_name, depositor_name, quantity,
                                      amount, gross_amount, point_used, order_group_id, status, paid_at,
                                      recipient_name, recipient_phone, postal_code, address, address_detail, user_id)
                                     VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,
@@ -2914,7 +2933,7 @@ def checkout():
                                             %s,%s,%s,%s,%s,%s) RETURNING id""",
                                     (row['product_id'], row['product_name'],
                                      row['option_name'] + (' × ' + str(row['quantity']) if row['quantity'] > 1 else ''),
-                                     depositor or '포인트 전액 결제', cash, gross, applied, group_id,
+                                     depositor or '포인트 전액 결제', row['quantity'], cash, gross, applied, group_id,
                                      order_status, order_status, recipient_name, recipient_phone,
                                      postal_code, address, address_detail, user_id))
                                 ids.append(cur.fetchone()['id'])

@@ -19,6 +19,14 @@
 .mono-listing-prices p {display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;margin:5px 0;font-size:13px;line-height:1.5;}
 .mono-listing-prices p span {color:#555;overflow-wrap:anywhere;}
 .mono-listing-prices p strong {white-space:nowrap;color:#111;}
+
+.mono-event-section{max-width:1200px;margin:40px auto 25px;padding:0 20px}
+.mono-event-section h2{font-size:24px;margin-bottom:20px}
+.mono-event-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.mono-event-card{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:118px;padding:18px 8px;border:1px solid #ddd;border-radius:12px;background:#fff;text-decoration:none;color:#111;text-align:center;transition:box-shadow .2s,transform .2s}
+.mono-event-card:hover{box-shadow:0 6px 18px #00000014;transform:translateY(-2px)}
+.mono-event-icon{font-size:28px;margin-bottom:8px}.mono-event-name{font-weight:700;font-size:16px}.mono-event-desc{color:#777;font-size:12px;margin-top:5px}
+@media(max-width:760px){.mono-event-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.mono-event-card{min-height:105px}}
 </style>
 </head>
 
@@ -134,17 +142,29 @@
 ========================= -->
 
 <main>
+    {% if home_top20 %}
+    <section class="mono-event-section" aria-label="이벤트 메뉴">
+        <h2>EVENT</h2>
+        <div class="mono-event-grid">
+            <a class="mono-event-card" href="{{ url_for('profile') if session.get('user_logged_in') else url_for('login') }}"><span class="mono-event-icon">🎁</span><span class="mono-event-name">출석체크</span><span class="mono-event-desc">매일 10P + 10EXP</span></a>
+            <a class="mono-event-card" href="{{ url_for('event_page', event_key='purchase-review') }}"><span class="mono-event-icon">🛍️</span><span class="mono-event-name">구매 인증</span><span class="mono-event-desc">구매 후기·인증</span></a>
+            <a class="mono-event-card" href="{{ url_for('event_page', event_key='roulette') }}"><span class="mono-event-icon">🎲</span><span class="mono-event-name">랜덤 룰렛</span><span class="mono-event-desc">이벤트 게임</span></a>
+            <a class="mono-event-card" href="{{ url_for('event_page', event_key='support') }}"><span class="mono-event-icon">💬</span><span class="mono-event-name">고객센터</span><span class="mono-event-desc">문의 및 상담</span></a>
+            <a class="mono-event-card" href="{{ url_for('event_page', event_key='specials') }}"><span class="mono-event-icon">🎉</span><span class="mono-event-name">특가 상품</span><span class="mono-event-desc">상품 할인 안내</span></a>
+        </div>
+    </section>
+    {% endif %}
 
     <section class="products">
 
         <h2>
-            추천 상품
+            {{ '🏆 판매량 TOP 20' if home_top20 else '전체 상품' }}
         </h2>
 
         <div class="product-grid">
 
             {% for product in products %}
-            {% for option in [none] + product["listing_options"] %}
+            {% for option in ([none] if home_top20 else [none] + product["listing_options"]) %}
             <div class="product-card">
                 <a href="{{ url_for('product_detail', product_id=product['id'], option=('base' if option is none else 'option-' ~ option['id'])) }}" class="product-main-link">
                     {% if product['image_file'] %}
@@ -170,7 +190,7 @@
             {% else %}
 
             <p>
-                등록된 상품이 없습니다.
+                {{ '아직 결제 완료된 판매 상품이 없습니다.' if home_top20 else '등록된 상품이 없습니다.' }}
             </p>
 
             {% endfor %}
