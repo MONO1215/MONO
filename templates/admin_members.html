@@ -10,19 +10,20 @@
 .members-tools input{padding:12px;border:1px solid #ddd;border-radius:8px;min-width:240px}
 .members-download{display:inline-block;padding:12px 18px;border-radius:8px;background:#111;color:white;text-decoration:none}
 .members-table-wrap{overflow-x:auto;border:1px solid #e5e7eb;border-radius:12px;background:white}
-.members-table{border-collapse:collapse;width:100%;min-width:1100px}
+.members-table{border-collapse:collapse;width:100%;min-width:1330px}
 .members-table th,.members-table td{padding:12px 14px;border-bottom:1px solid #eee;text-align:left;white-space:nowrap;font-size:14px}
 .members-table th{background:#f8f8f8}
 .members-help{color:#666;font-size:13px}
+.member-action,.member-danger{display:inline-block;padding:8px 10px;border-radius:7px;font-size:13px;text-decoration:none;border:1px solid #ddd;white-space:nowrap}.member-action{color:#111;background:#fff}.member-danger{background:#a72a2a;color:#fff;border:0;cursor:pointer}
 </style></head><body>
 <header><div class="header-container"><a href="/" class="logo">MONO</a><nav><span class="admin-user-name">{{ session.get('admin_username') }} 관리자</span> <a href="{{ url_for('admin_logout') }}">로그아웃</a></nav></div></header>
 <div class="mono-admin-nav"><a href="{{ url_for('admin') }}">상품 관리</a><a href="{{ url_for('admin_orders') }}">주문 관리</a><a href="{{ url_for('admin_sales') }}">매출 관리</a><a class="active" href="{{ url_for('admin_members') }}">회원 관리</a></div>
 <main class="members-wrap"><h1>회원 관리</h1><p>전체 회원 <strong id="member-count">{{ members|length }}</strong>명</p>
 <div class="members-tools"><input type="search" id="member-search" placeholder="이름 · 아이디 · 이메일 검색" aria-label="회원 검색"><a class="members-download" href="{{ url_for('admin_members_export') }}">최신 회원 명단 엑셀 다운로드</a></div>
 <p class="members-help">회원가입 및 정보 수정은 데이터베이스에 자동 반영됩니다. 엑셀 다운로드 시 최신 정보를 생성합니다. 개인정보가 포함되므로 파일을 안전하게 보관하세요.</p>
-<div class="members-table-wrap"><table class="members-table"><thead><tr><th>번호</th><th>이름</th><th>아이디</th><th>전화번호</th><th>이메일</th><th>우편번호</th><th>배송지</th><th>가입일</th></tr></thead><tbody>
-{% for member in members %}<tr class="member-row" data-search="{{ (member.name ~ ' ' ~ member.username ~ ' ' ~ member.email)|lower|e }}"><td>{{ member.id }}</td><td>{{ member.name }}</td><td>{{ member.username }}</td><td>{% if member.phone %}{{ member.phone[:3] }}-****-{{ member.phone[-4:] }}{% else %}-{% endif %}</td><td>{{ member.email }}</td><td>{{ member.postal_code or '-' }}</td><td>{{ member.address or '-' }}</td><td>{{ member.created_at.strftime('%Y-%m-%d') if member.created_at else '-' }}</td></tr>
-{% else %}<tr><td colspan="8">가입한 회원이 없습니다.</td></tr>{% endfor %}
+<div class="members-table-wrap"><table class="members-table"><thead><tr><th>번호</th><th>이름</th><th>아이디</th><th>전화번호</th><th>이메일</th><th>우편번호</th><th>배송지</th><th>가입일</th><th>레벨</th><th>보유 포인트</th><th>관리</th></tr></thead><tbody>
+{% for member in members %}<tr class="member-row" data-search="{{ (member.name ~ ' ' ~ member.username ~ ' ' ~ member.email)|lower|e }}"><td>{{ member.id }}</td><td>{{ member.name }}</td><td>{{ member.username }}</td><td>{% if member.phone %}{{ member.phone[:3] }}-****-{{ member.phone[-4:] }}{% else %}-{% endif %}</td><td>{{ member.email }}</td><td>{{ member.postal_code or '-' }}</td><td>{{ member.address or '-' }}</td><td>{{ member.created_at.strftime('%Y-%m-%d') if member.created_at else '-' }}</td><td>Lv. {{ member.level or 1 }}</td><td>{{ '{:,}'.format(member.point or 0) }} P</td><td><a class="member-action" href="{{ url_for('admin_member_edit', member_id=member.id) }}">정보 변경</a> <form method="post" action="{{ url_for('admin_member_delete', member_id=member.id) }}" style="display:inline" onsubmit="return confirm('이 회원을 삭제할까요? 이 작업은 되돌릴 수 없습니다. 주문 기록이 있는 회원은 삭제되지 않습니다.');"><input type="hidden" name="csrf_token" value="{{ member_csrf }}"><button type="submit" class="member-danger">삭제</button></form></td></tr>
+{% else %}<tr><td colspan="11">가입한 회원이 없습니다.</td></tr>{% endfor %}
 </tbody></table></div></main>
 <script>document.getElementById('member-search').addEventListener('input',function(){const q=this.value.trim().toLowerCase();let count=0;document.querySelectorAll('.member-row').forEach(row=>{const visible=row.dataset.search.includes(q);row.hidden=!visible;if(visible)count++});document.getElementById('member-count').textContent=count;});</script>
 </body></html>

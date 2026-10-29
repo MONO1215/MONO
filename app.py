@@ -1552,11 +1552,107 @@ def get_admin_members():
         conn.close()
 
 
+def get_member_admin_csrf():
+    if "member_admin_csrf" not in session:
+        session["member_admin_csrf"] = token_urlsafe(32)
+    return session["member_admin_csrf"]
+
+
+def verify_member_admin_csrf():
+    from hmac import compare_digest
+    expected = session.get("member_admin_csrf")
+    supplied = request.form.get("csrf_token", "")
+    if not expected or not compare_digest(expected, supplied):
+        abort(403, "보안 토큰이 유효하지 않습니다.")
+
+
+@app.route("/admin/members/<int:member_id>/edit", methods=["GET", "POST"])
+@admin_login_required
+def admin_member_edit(member_id):
+    error = None
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""SELECT id, name, username, phone, email, postal_code,
+                           address, address_detail, level, point, exp
+                           FROM users WHERE id=%s""", (member_id,))
+            member = cur.fetchone()
+            if not member:
+                abort(404)
+            if request.method == "POST":
+                verify_member_admin_csrf()
+                name = request.form.get("name", "").strip()
+                phone = request.form.get("phone", "").strip()
+                email = request.form.get("email", "").strip()
+                postal_code = request.form.get("postal_code", "").strip()
+                address = request.form.get("address", "").strip()
+                address_detail = request.form.get("address_detail", "").strip()
+                try:
+                    level = int(request.form.get("level", ""))
+                    point = int(request.form.get("point", ""))
+                except ValueError:
+                    level, point = -1, -1
+                if not name or len(name) > 100 or not email or len(email) > 254:
+                    error = "이름과 이메일을 올바르게 입력해 주세요."
+                elif len(phone) > 30 or (postal_code and not re.fullmatch(r"[0-9]{5}", postal_code)):
+                    error = "전화번호 또는 우편번호를 확인해 주세요."
+                elif len(address) > 300 or len(address_detail) > 300:
+                    error = "주소는 각 300자 이내로 입력해 주세요."
+                elif not 1 <= level <= 100 or not 0 <= point <= 1000000000:
+                    error = "레벨은 1~100, 포인트는 0~10억 범위로 입력해 주세요."
+                else:
+                    cur.execute("SELECT 1 FROM users WHERE email=%s AND id<>%s LIMIT 1", (email, member_id))
+                    if cur.fetchone():
+                        error = "이미 다른 회원이 사용 중인 이메일입니다."
+                    else:
+                        cur.execute("""UPDATE users SET name=%s, phone=%s, email=%s,
+                                       postal_code=%s, address=%s, address_detail=%s,
+                                       level=%s, point=%s WHERE id=%s""",
+                                    (name, phone, email, postal_code or None,
+                                     address, address_detail, level, point, member_id))
+                        conn.commit()
+                        return redirect(url_for("admin_members"))
+        return render_template("admin_member_edit.html", member=member,
+                               error=error, member_csrf=get_member_admin_csrf())
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+@app.route("/admin/members/<int:member_id>/delete", methods=["POST"])
+@admin_login_required
+def admin_member_delete(member_id):
+    verify_member_admin_csrf()
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id FROM users WHERE id=%s FOR UPDATE", (member_id,))
+            if not cur.fetchone():
+                abort(404)
+            # 주문 기록이 있는 회원은 삭제를 제한해 주문/환불/포인트 내역을 보존합니다.
+            cur.execute("SELECT 1 FROM bank_orders WHERE user_id=%s LIMIT 1", (member_id,))
+            if cur.fetchone():
+                return ("주문 기록이 있는 회원은 관리자 화면에서 직접 삭제할 수 없습니다. "
+                        "주문 및 환불 기록 보존을 위해 별도 탈퇴/비식별화 처리가 필요합니다.", 409)
+            cur.execute("DELETE FROM attendance WHERE user_id=%s", (member_id,))
+            cur.execute("DELETE FROM member_cart_items WHERE user_id=%s", (member_id,))
+            cur.execute("DELETE FROM users WHERE id=%s", (member_id,))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return redirect(url_for("admin_members"))
+
+
 @app.route("/admin/members")
 @admin_login_required
 def admin_members():
     members = get_admin_members()
-    return render_template("admin_members.html", members=members)
+    return render_template("admin_members.html", members=members, member_csrf=get_member_admin_csrf())
 
 
 @app.route("/admin/members/export.xlsx")

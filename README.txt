@@ -1,11 +1,13 @@
-MONO 회원정보 상단 카테고리 통일 + 포인트 결제 (1P=1원)
+MONO 관리자 회원 관리 확장
 
-파일 위치:
- app.py -> 프로젝트 루트
- templates/profile.html, checkout.html, admin_orders.html -> templates 폴더
+수정/추가 파일:
+- app.py (기존 포인트 결제 기능 포함)
+- templates/admin_members.html (레벨/포인트 표시, 변경/삭제 버튼)
+- templates/admin_member_edit.html (관리자 회원정보 수정)
+- templates/profile.html, checkout.html, admin_orders.html (직전 버전 유지)
 
-기능: 결제 화면에서 포인트 입력/전액 사용, 주문 저장과 포인트 차감 트랜잭션, 관리자 취소/환불 시 포인트 반환, 100% 포인트 결제, 관리자 주문 내역에서 포인트/입금액 구분.
-
-주의: 기존 주문 테이블 bank_orders.amount 제약조건을 >=0으로 변경하며 point_used/gross_amount/order_group_id 컬럼을 자동 추가합니다. 배포 전에 DB 백업을 권장합니다. 관리자 매출 집계의 amount는 실제 입금액 기준입니다. 상품금액 합계와 다를 수 있습니다.
-
-중요: 100% 포인트 결제는 자동 paid 처리합니다. 다른 경로(/api/bank-orders)에는 포인트 적용이 되지 않습니다. 실제 DB/배포 환경 테스트가 필요합니다.
+기존 프로젝트의 동일 경로에 덮어쓰기 후 배포하세요.
+삭제 정책: 주문 기록이 있는 회원은 삭제할 수 없으며 HTTP 409 안내가 표시됩니다. 주문 기록이 없는 회원만 삭제됩니다.
+수정 가능한 항목: 이름/전화번호/이메일/주소/레벨/포인트. 아이디/비밀번호는 변경하지 않습니다.
+관리자 로그인과 CSRF 확인을 거칩니다.
+실제 DB와 연동 테스트는 별도 필요합니다.
