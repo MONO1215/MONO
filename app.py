@@ -605,6 +605,50 @@ def home():
     return render_template("index.html", products=products, home_top20=True)
 
 
+
+# ==================================================
+# 상품 검색 (상품명 / 카테고리 / 옵션명)
+# ==================================================
+@app.route("/search", methods=["GET"])
+def search_products():
+    search_query = request.args.get("q", "").strip()
+    # 지나치게 긴 검색어는 DB에 전달하지 않는다.
+    if len(search_query) > 100:
+        return "검색어는 100자 이내로 입력해 주세요.", 400
+
+    products = []
+    if search_query:
+        # LIKE 와일드카드 자체를 입력한 경우에도 일반 문자로 검색한다.
+        slash = chr(92)
+        escaped = (search_query.replace(slash, slash + slash)
+                  .replace("%", slash + "%")
+                  .replace("_", slash + "_"))
+        pattern = "%" + escaped + "%"
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT p.* FROM products p
+                    WHERE p.name ILIKE %s ESCAPE '\'
+                       OR p.category ILIKE %s ESCAPE '\'
+                       OR EXISTS (
+                           SELECT 1 FROM product_options o
+                           WHERE o.product_id = p.id
+                             AND o.option_name ILIKE %s ESCAPE '\'
+                       )
+                    ORDER BY p.id DESC
+                """, (pattern, pattern, pattern))
+                products = cur.fetchall()
+                attach_listing_options(cur, products)
+        finally:
+            conn.close()
+
+    if not session.get("user_logged_in"):
+        products = mask_public_prices(products)
+    return render_template("index.html", products=products,
+                           home_top20=False, search_query=search_query,
+                           is_search=True)
+
 @app.route("/events/<event_key>")
 def event_page(event_key):
     pages = {

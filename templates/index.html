@@ -27,6 +27,15 @@
 .mono-event-card:hover{box-shadow:0 6px 18px #00000014;transform:translateY(-2px)}
 .mono-event-icon{font-size:28px;margin-bottom:8px}.mono-event-name{font-weight:700;font-size:16px}.mono-event-desc{color:#777;font-size:12px;margin-top:5px}
 @media(max-width:760px){.mono-event-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.mono-event-card{min-height:105px}}
+
+/* 카테고리 메뉴 안의 상품 검색 */
+.mono-nav-search{display:inline-flex;align-items:center;gap:6px;margin:4px 0;max-width:100%;vertical-align:middle}
+.mono-nav-search input{box-sizing:border-box;width:190px;min-width:0;height:36px;padding:0 11px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#111;font:inherit;font-size:13px}
+.mono-nav-search input:focus{outline:2px solid #64748b;outline-offset:1px}
+.mono-nav-search button{height:36px;padding:0 12px;border:0;border-radius:8px;background:#1f2937;color:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.mono-nav-search button:hover{background:#374151}
+.mono-search-summary{margin:0 0 18px;color:#475569;font-size:14px}
+@media(max-width:600px){.mono-nav-search{display:flex;flex:1 1 100%;width:100%;order:20}.mono-nav-search input{flex:1;width:auto}.mono-nav-search button{flex:0 0 auto}}
 </style>
 </head>
 
@@ -87,6 +96,12 @@
                 스포츠용품
             </a>
 
+
+
+            <form class="mono-nav-search" action="{{ url_for('search_products') }}" method="get" role="search">
+                <input type="search" name="q" value="{{ search_query|default('', true) }}" placeholder="상품명 검색" aria-label="상품 검색" maxlength="100" required>
+                <button type="submit">🔍 검색</button>
+            </form>
 
             <a href="{{ url_for('view_cart') }}">장바구니</a>
 
@@ -158,8 +173,12 @@
     <section class="products">
 
         <h2>
-            {{ '🏆 판매량 TOP 20' if home_top20 else '전체 상품' }}
+            {{ '검색 결과' if is_search|default(false) else ('🏆 판매량 TOP 20' if home_top20 else '전체 상품') }}
         </h2>
+
+        {% if is_search|default(false) %}
+        <p class="mono-search-summary">{% if search_query %}“{{ search_query }}” 검색 결과 {{ products|length }}개 상품{% else %}검색어를 입력해 주세요.{% endif %}</p>
+        {% endif %}
 
         <div class="product-grid">
 
@@ -190,7 +209,7 @@
             {% else %}
 
             <p>
-                {{ '아직 결제 완료된 판매 상품이 없습니다.' if home_top20 else '등록된 상품이 없습니다.' }}
+                {{ ('검색어를 입력해 주세요.' if not search_query else '검색 결과가 없습니다. 다른 검색어를 입력해 주세요.') if is_search|default(false) else ('아직 결제 완료된 판매 상품이 없습니다.' if home_top20 else '등록된 상품이 없습니다.') }}
             </p>
 
             {% endfor %}
