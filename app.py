@@ -44,8 +44,13 @@ app = Flask(__name__)
 
 app.secret_key = os.environ.get(
     "SECRET_KEY",
-    "mono-admin-session-secret-2026"
+    None
 )
+if not app.secret_key:
+    if os.environ.get("VERCEL") or os.environ.get("MONO_ENV") == "production":
+        raise RuntimeError("SECRET_KEY 환경변수를 반드시 설정하세요.")
+    app.secret_key = token_urlsafe(48)
+
 
 
 # ==================================================
@@ -88,6 +93,81 @@ os.makedirs(
 )
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+# ==================================================
+# MONO 기본 보안 설정
+# ==================================================
+app.config.update(
+    MAX_CONTENT_LENGTH=8 * 1024 * 1024,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=bool(os.environ.get("VERCEL") or os.environ.get("MONO_HTTPS") == "1"),
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=12),
+)
+
+@app.after_request
+def mono_security_headers(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    # 기존 상품 설명 HTML 및 외부 이미지와의 호환성을 위해 점진적으로 적용하는 CSP.
+    # inline 스크립트 제거 및 출처 목록 점검 후 더 강화하세요.
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; "
+        "form-action 'self'; script-src 'self' 'unsafe-inline' https://t1.daumcdn.net https://postcode.map.daum.net; "
+        "style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; "
+        "font-src 'self' data:; connect-src 'self' https:; frame-src https://postcode.map.daum.net"
+    )
+    if app.config["SESSION_COOKIE_SECURE"]:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    if request.path.startswith(("/profile", "/admin", "/checkout", "/cart", "/support", "/roulette")):
+        response.headers["Cache-Control"] = "private, no-store"
+    return response
+
+@app.errorhandler(413)
+def mono_upload_too_large(_error):
+    return "업로드 파일이 너무 큽니다. 8MB 이하로 제출해 주세요.", 413
+
+# DB에 저장하는 로그인 실패 기록: Vercel 다중 인스턴스에서도 공유됨.
+def _login_identity(kind, username):
+    import hashlib
+    # 원본 IP/아이디를 별도 로그 테이블에 저장하지 않는다.
+    ip = request.remote_addr or "unknown"
+    key = f"{kind}|{ip}|{username.casefold()}"
+    return hashlib.sha256(key.encode("utf-8")).hexdigest()
+
+def _login_blocked(kind, username):
+    key = _login_identity(kind, username)
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM mono_login_failures WHERE occurred_at < NOW() - INTERVAL '2 days'")
+            cur.execute("SELECT COUNT(*) AS n FROM mono_login_failures WHERE identity_hash=%s AND occurred_at > NOW() - INTERVAL '15 minutes'", (key,))
+            blocked = cur.fetchone()["n"] >= 8
+        conn.commit()
+        return blocked
+    finally:
+        conn.close()
+
+def _login_record_failure(kind, username):
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("INSERT INTO mono_login_failures(identity_hash) VALUES (%s)", (_login_identity(kind, username),))
+        conn.commit()
+    finally:
+        conn.close()
+
+def _login_clear_failures(kind, username):
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM mono_login_failures WHERE identity_hash=%s", (_login_identity(kind, username),))
+        conn.commit()
+    finally:
+        conn.close()
+
 
 
 # ==================================================
@@ -390,6 +470,13 @@ def init_db():
                 UNIQUE(user_id, spin_date)
             )""")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_roulette_spins_user ON roulette_spins(user_id, created_at DESC)")
+
+            cur.execute("""CREATE TABLE IF NOT EXISTS mono_login_failures (
+                id BIGSERIAL PRIMARY KEY,
+                identity_hash CHAR(64) NOT NULL,
+                occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )""")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_mono_login_failures_identity_time ON mono_login_failures(identity_hash, occurred_at)")
 
             # 회원별 장바구니: 브라우저 세션이 아닌 DB에 회원 ID로 저장
             cur.execute("""CREATE TABLE IF NOT EXISTS member_cart_items (
@@ -1223,6 +1310,9 @@ def login():
             ""
         )
 
+        if _login_blocked("member", username):
+            return "로그인 시도가 너무 많습니다. 15분 후 다시 시도해 주세요.", 429
+
         conn = get_db_connection()
 
         try:
@@ -1250,7 +1340,9 @@ def login():
             )
         ):
 
-            session.pop("mono_cart", None)
+            _login_clear_failures("member", username)
+            session.clear()
+            session.permanent = True
             session["user_logged_in"] = True
             session["user_id"] = user["id"]
             session["username"] = user["username"]
@@ -1259,6 +1351,7 @@ def login():
                 url_for("home")
             )
 
+        _login_record_failure("member", username)
         error = (
             "아이디 또는 비밀번호가 올바르지 않습니다."
         )
@@ -1789,6 +1882,9 @@ def admin_login():
             ""
         )
 
+        if _login_blocked("admin", username):
+            return "로그인 시도가 너무 많습니다. 15분 후 다시 시도해 주세요.", 429
+
         conn = get_db_connection()
 
         try:
@@ -1816,7 +1912,9 @@ def admin_login():
             )
         ):
 
+            _login_clear_failures("admin", username)
             session.clear()
+            session.permanent = True
 
             session["admin_logged_in"] = True
             session["admin_username"] = (
@@ -1827,6 +1925,7 @@ def admin_login():
                 url_for("admin")
             )
 
+        _login_record_failure("admin", username)
         error = (
             "아이디 또는 비밀번호가 올바르지 않습니다."
         )
@@ -3427,5 +3526,5 @@ def admin_sales():
 if __name__ == "__main__":
 
     app.run(
-        debug=True
+        debug=os.environ.get("MONO_DEBUG") == "1" and not IS_VERCEL
     )
