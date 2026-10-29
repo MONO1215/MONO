@@ -338,6 +338,17 @@ def init_db():
             cur.execute("ALTER TABLE bank_orders ADD COLUMN IF NOT EXISTS address_detail TEXT")
             cur.execute("ALTER TABLE bank_orders ADD COLUMN IF NOT EXISTS user_id INTEGER")
 
+            # 포인트 결제: 주문별 원금/사용 포인트/실제 입금액을 보관
+            cur.execute("ALTER TABLE bank_orders ADD COLUMN IF NOT EXISTS point_used INTEGER NOT NULL DEFAULT 0")
+            cur.execute("ALTER TABLE bank_orders ADD COLUMN IF NOT EXISTS gross_amount INTEGER")
+            cur.execute("ALTER TABLE bank_orders ADD COLUMN IF NOT EXISTS order_group_id UUID")
+            cur.execute("UPDATE bank_orders SET gross_amount = amount WHERE gross_amount IS NULL")
+            # 포인트 100% 결제는 입금액이 0원일 수 있다.
+            cur.execute("ALTER TABLE bank_orders DROP CONSTRAINT IF EXISTS bank_orders_amount_check")
+            cur.execute("ALTER TABLE bank_orders ADD CONSTRAINT bank_orders_amount_check CHECK (amount >= 0)")
+            cur.execute("ALTER TABLE bank_orders ADD CONSTRAINT bank_orders_point_nonnegative CHECK (point_used >= 0)" ) if False else None
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_bank_orders_group ON bank_orders(order_group_id)")
+
             # 회원별 장바구니: 브라우저 세션이 아닌 DB에 회원 ID로 저장
             cur.execute("""CREATE TABLE IF NOT EXISTS member_cart_items (
                 id BIGSERIAL PRIMARY KEY,
@@ -2666,81 +2677,126 @@ def update_cart():
 
 @app.route("/checkout", methods=["GET", "POST"])
 def checkout():
+    user_id = session.get("user_id")
+    if not session.get("user_logged_in") or not user_id:
+        return redirect(url_for("login"))
     lines = cart_lines()
     if not lines:
         return redirect(url_for("view_cart"))
     total = sum(x["subtotal"] for x in lines)
     error = None
-    user = None
-    user_id = session.get("user_id") if session.get("user_logged_in") else None
-    if user_id:
-        conn = get_db_connection()
-        try:
-            with conn.cursor() as cur:
-                cur.execute("""SELECT id, name, phone, postal_code, address, address_detail
-                               FROM users WHERE id=%s""", (user_id,))
-                user = cur.fetchone()
-        finally:
-            conn.close()
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""SELECT id, name, phone, postal_code, address, address_detail, point
+                           FROM users WHERE id=%s""", (user_id,))
+            user = cur.fetchone()
+    finally:
+        conn.close()
     if not user:
-        # 탈퇴한 회원이나 유효하지 않은 로그인 세션으로 주문할 수 없도록 확인
         return redirect(url_for("login"))
+    requested_points = 0
     if request.method == "POST":
         if request.form.get("csrf_token") != session.get("order_csrf") or not session.get("order_csrf"):
             abort(403)
-        if not BANK_ACCOUNT_NUMBER:
-            error = "계좌번호가 아직 등록되지 않아 주문할 수 없습니다."
         depositor = request.form.get("depositor_name", "").strip()
         recipient_name = request.form.get("recipient_name", "").strip()
         recipient_phone = request.form.get("recipient_phone", "").strip()
         postal_code = request.form.get("postal_code", "").strip()
         address = request.form.get("address", "").strip()
         address_detail = request.form.get("address_detail", "").strip()
-        if not 1 <= len(depositor) <= 50:
+        raw_points = request.form.get("use_points", "0").strip() or "0"
+        if not re.fullmatch(r"[0-9]{1,12}", raw_points):
+            error = "사용 포인트는 0 이상의 정수로 입력해 주세요."
+        else:
+            requested_points = int(raw_points)
+        if not error and requested_points > min(total, max(0, user["point"] or 0)):
+            error = "사용 가능한 포인트를 초과했습니다."
+        if not error and not BANK_ACCOUNT_NUMBER and requested_points < total:
+            error = "계좌번호가 등록되지 않아 주문할 수 없습니다."
+        if not error and not 1 <= len(depositor) <= 50 and requested_points < total:
             error = "입금자명을 1~50자로 입력해 주세요."
-        elif not 1 <= len(recipient_name) <= 100:
+        elif not error and not 1 <= len(recipient_name) <= 100:
             error = "받는 분 이름을 입력해 주세요."
-        elif not 1 <= len(recipient_phone) <= 30:
+        elif not error and not 1 <= len(recipient_phone) <= 30:
             error = "받는 분 연락처를 입력해 주세요."
-        elif not re.fullmatch(r"[0-9]{5}", postal_code):
+        elif not error and not re.fullmatch(r"[0-9]{5}", postal_code):
             error = "우편번호 5자리를 입력해 주세요."
-        elif not address or len(address) > 300 or len(address_detail) > 300:
+        elif not error and (not address or len(address) > 300 or len(address_detail) > 300):
             error = "배송지 주소를 정확히 입력해 주세요."
         if not error:
             conn = get_db_connection()
             try:
                 with conn.cursor() as cur:
-                    ids = []
-                    for line in lines:
-                        # 기존 매출 집계와 호환되도록 상품별 주문을 유지하면서 배송지 저장
-                        cur.execute("""INSERT INTO bank_orders
-                            (product_id, product_name, option_name, depositor_name, amount,
-                             recipient_name, recipient_phone, postal_code, address, address_detail, user_id)
-                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
-                            (line["product_id"], line["product_name"],
-                             line["option_name"] + (" × " + str(line["quantity"]) if line["quantity"] > 1 else ""),
-                             depositor, line["subtotal"], recipient_name, recipient_phone,
-                             postal_code, address, address_detail, user["id"] if user else None))
-                        ids.append(cur.fetchone()["id"])
-                conn.commit()
+                    # 회원 행을 잠가 동시 주문/포인트 중복 차감을 방지한다.
+                    cur.execute("SELECT point FROM users WHERE id=%s FOR UPDATE", (user_id,))
+                    locked_user = cur.fetchone()
+                    if not locked_user:
+                        abort(403)
+                    # 동일 회원의 장바구니 행을 잠근 뒤 서버에서 가격을 재조회한다.
+                    cur.execute("""SELECT c.id, c.product_id, c.option_id, c.quantity,
+                        p.name AS product_name,
+                        CASE WHEN c.option_id IS NULL THEN '기본 상품' ELSE o.option_name END AS option_name,
+                        CASE WHEN c.option_id IS NULL THEN p.bank_transfer_price ELSE o.bank_transfer_price END AS price
+                        FROM member_cart_items c JOIN products p ON p.id=c.product_id
+                        LEFT JOIN product_options o ON o.id=c.option_id AND o.product_id=c.product_id
+                        WHERE c.user_id=%s AND p.is_sold_out=FALSE
+                        AND (c.option_id IS NULL OR o.id IS NOT NULL)
+                        ORDER BY c.id ASC LIMIT 30 FOR UPDATE OF c""", (user_id,))
+                    live_rows = cur.fetchall()
+                    if not live_rows or any(r['price'] is None or r['price'] <= 0 for r in live_rows):
+                        error = "장바구니 상품 정보가 변경되었습니다. 다시 확인해 주세요."
+                    else:
+                        live_total = sum(r['price'] * r['quantity'] for r in live_rows)
+                        if live_total != total or len(live_rows) != len(lines):
+                            error = "주문 금액이 변경되었습니다. 장바구니를 다시 확인해 주세요."
+                        elif requested_points > min(live_total, max(0, locked_user['point'] or 0)):
+                            error = "포인트 잔액이 변경되었습니다. 다시 확인해 주세요."
+                        elif not BANK_ACCOUNT_NUMBER and requested_points < live_total:
+                            error = "계좌번호가 등록되지 않아 주문할 수 없습니다."
+                        else:
+                            # 주문별 포인트는 합계가 정확히 일치하도록 순서대로 배분한다.
+                            remaining_points = requested_points
+                            group_id = uuid4()
+                            ids = []
+                            for i, row in enumerate(live_rows):
+                                gross = row['price'] * row['quantity']
+                                applied = min(gross, remaining_points)
+                                remaining_points -= applied
+                                cash = gross - applied
+                                order_status = 'paid' if cash == 0 else 'reported'
+                                cur.execute("""INSERT INTO bank_orders
+                                    (product_id, product_name, option_name, depositor_name,
+                                     amount, gross_amount, point_used, order_group_id, status, paid_at,
+                                     recipient_name, recipient_phone, postal_code, address, address_detail, user_id)
+                                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,
+                                            CASE WHEN %s='paid' THEN NOW() ELSE NULL END,
+                                            %s,%s,%s,%s,%s,%s) RETURNING id""",
+                                    (row['product_id'], row['product_name'],
+                                     row['option_name'] + (' × ' + str(row['quantity']) if row['quantity'] > 1 else ''),
+                                     depositor or '포인트 전액 결제', cash, gross, applied, group_id,
+                                     order_status, order_status, recipient_name, recipient_phone,
+                                     postal_code, address, address_detail, user_id))
+                                ids.append(cur.fetchone()['id'])
+                            if requested_points:
+                                cur.execute("UPDATE users SET point=point-%s WHERE id=%s", (requested_points, user_id))
+                            cur.execute("DELETE FROM member_cart_items WHERE user_id=%s", (user_id,))
+                if error:
+                    conn.rollback()
+                else:
+                    conn.commit()
             except Exception:
                 conn.rollback()
                 raise
             finally:
                 conn.close()
-            # 주문 성공 후 현재 회원의 장바구니만 비운다.
-            cleanup_conn = get_db_connection()
-            try:
-                with cleanup_conn.cursor() as cleanup_cur:
-                    cleanup_cur.execute("DELETE FROM member_cart_items WHERE user_id=%s", (user_id,))
-                cleanup_conn.commit()
-            finally:
-                cleanup_conn.close()
-            return render_template("checkout_success.html", ids=ids, total=total)
-    return render_template(
-        "checkout.html", lines=lines, total=total, csrf=get_order_csrf(),
-        account=BANK_ACCOUNT_NUMBER, error=error, user=user
-    )
+            if not error:
+                session['order_csrf'] = token_urlsafe(32)
+                return render_template("checkout_success.html", ids=ids,
+                                       total=total-requested_points)
+    return render_template("checkout.html", lines=lines, total=total,
+                           csrf=get_order_csrf(), account=BANK_ACCOUNT_NUMBER,
+                           error=error, user=user, requested_points=requested_points)
 
 
 # ==================================================
@@ -2820,7 +2876,7 @@ def admin_order_status(order_id):
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT status FROM bank_orders WHERE id=%s FOR UPDATE", (order_id,))
+            cur.execute("SELECT status, user_id, point_used FROM bank_orders WHERE id=%s FOR UPDATE", (order_id,))
             order = cur.fetchone()
             if not order:
                 abort(404)
@@ -2828,6 +2884,9 @@ def admin_order_status(order_id):
             allowed = {"reported": {"paid", "cancelled"}, "paid": {"refunded"}}
             if status not in allowed.get(old, set()):
                 abort(400, "허용되지 않는 주문 상태 변경입니다.")
+            if status in ('cancelled', 'refunded') and order['user_id'] and order['point_used']:
+                cur.execute("UPDATE users SET point=point+%s WHERE id=%s",
+                            (order['point_used'], order['user_id']))
             cur.execute("""UPDATE bank_orders SET status=%s,
                 paid_at=CASE WHEN %s='paid' THEN NOW() ELSE paid_at END,
                 refunded_at=CASE WHEN %s='refunded' THEN NOW() ELSE refunded_at END

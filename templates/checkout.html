@@ -2,13 +2,13 @@
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>주문 확인 | MONO</title>
 <style>
-body{font-family:Arial,sans-serif;margin:0;color:#151515;background:#fafafa}main{max-width:850px;margin:40px auto;padding:0 18px}a{color:inherit}header{padding:20px;background:#fff;border-bottom:1px solid #eee}header a{margin-right:18px;text-decoration:none}.card{background:white;padding:22px;border:1px solid #ddd;border-radius:12px;margin:12px 0}.row{display:flex;justify-content:space-between;gap:16px;align-items:center}.btn{background:#111;color:white;border:0;border-radius:8px;padding:12px 20px;cursor:pointer;text-decoration:none;display:inline-block}.total{font-size:23px;font-weight:bold;text-align:right}input{padding:10px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;width:100%;max-width:520px;font:inherit}button{cursor:pointer}.field{margin:14px 0}.field label{display:block;font-weight:600;margin-bottom:8px}.help{color:#666;font-size:13px}.error{color:#b00}.form-actions{margin-top:20px}@media(max-width:540px){.row{flex-wrap:wrap}}
+body{font-family:Arial,sans-serif;margin:0;color:#151515;background:#fafafa}main{max-width:850px;margin:40px auto;padding:0 18px}a{color:inherit}header{padding:20px;background:#fff;border-bottom:1px solid #eee}header a{margin-right:18px;text-decoration:none}.card{background:white;padding:22px;border:1px solid #ddd;border-radius:12px;margin:12px 0}.row{display:flex;justify-content:space-between;gap:16px;align-items:center}.btn{background:#111;color:white;border:0;border-radius:8px;padding:12px 20px;cursor:pointer;text-decoration:none;display:inline-block}.total{font-size:23px;font-weight:bold;text-align:right}input{padding:10px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;width:100%;max-width:520px;font:inherit}button{cursor:pointer}.field{margin:14px 0}.field label{display:block;font-weight:600;margin-bottom:8px}.help{color:#666;font-size:13px}.error{color:#b00}.form-actions{margin-top:20px}.points-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.points-row input{max-width:220px}.summary-line{display:flex;justify-content:space-between;gap:12px;margin:12px 0}.summary-line strong{font-size:19px}@media(max-width:540px){.row{flex-wrap:wrap}}
 </style></head><body>
 <header><a href="/">MONO</a><a href="/products">상품 목록</a><a href="{{ url_for('view_cart') }}">장바구니</a></header>
 <main><h1>주문 확인 · 계좌이체</h1>
 {% for item in lines %}<div class="card"><strong>{{ item.product_name }} / {{ item.option_name }}</strong><p>{{ item.quantity }}개 · {{ '{:,}'.format(item.subtotal) }}원</p></div>{% endfor %}
-<p class="total">총 입금 금액 {{ '{:,}'.format(total) }}원</p>
-<div class="card"><p>은행: <strong>카카오뱅크</strong></p><p>예금주: <strong>MONO</strong></p><p>계좌번호: <strong>{{ account or '등록 예정' }}</strong></p></div>
+<p class="total">상품 합계 {{ '{:,}'.format(total) }}원</p>
+<div class="card" id="bank-info"><p>은행: <strong>카카오뱅크</strong></p><p>예금주: <strong>MONO</strong></p><p>계좌번호: <strong>{{ account or '등록 예정' }}</strong></p></div>
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf }}">
 <section class="card"><h2>배송지 정보</h2><p class="help">회원가입 시 등록한 정보가 자동으로 입력됩니다. 이번 주문의 배송지만 변경할 수도 있습니다.</p>
@@ -19,10 +19,45 @@ body{font-family:Arial,sans-serif;margin:0;color:#151515;background:#fafafa}main
 <div class="field"><label for="address_detail">상세 주소</label><input id="address_detail" name="address_detail" maxlength="300" value="{{ request.form.get('address_detail', user.address_detail or '') }}" placeholder="동·호수 등"></div>
 <button type="button" class="btn" id="find-address" style="background:#555">우편번호·주소 검색</button>
 </section>
+<section class="card"><h2>포인트 사용</h2>
+<p>보유 포인트: <strong id="available-points">{{ '{:,}'.format(user.point or 0) }}P</strong> · 1P = 1원</p>
+<div class="points-row"><label for="use_points">사용 포인트</label>
+<input type="number" id="use_points" name="use_points" min="0" step="1" max="{{ [total, user.point or 0]|min }}" value="{{ requested_points or 0 }}">
+<button type="button" class="btn" id="use-all-points">전액 사용</button></div>
+<p class="help">상품금액까지 포인트를 사용할 수 있습니다. 포인트 사용액은 주문 접수 시 차감되며 취소·환불 처리 시 복구됩니다.</p>
+<hr><div class="summary-line"><span>상품 합계</span><span>{{ '{:,}'.format(total) }}원</span></div>
+<div class="summary-line"><span>포인트 할인</span><span id="points-discount">0원</span></div>
+<div class="summary-line"><strong>최종 입금 금액</strong><strong id="final-total">{{ '{:,}'.format(total) }}원</strong></div>
+</section>
 <section class="card"><h2>입금 정보</h2><div class="field"><label for="depositor">입금자명 *</label><input id="depositor" name="depositor_name" maxlength="50" required autocomplete="name" value="{{ request.form.get('depositor_name', '') }}" placeholder="실제 입금자명"></div>
 <p class="help">입금자명은 받는 분 이름과 달라도 됩니다.</p></section>
-<div class="form-actions"><button class="btn" type="submit" {% if not account %}disabled{% endif %}>입금 완료 신고 · 주문 접수</button></div>
+<div class="form-actions"><button id="submit-order" class="btn" type="submit">입금 완료 신고 · 주문 접수</button></div>
 </form><p><a href="{{ url_for('view_cart') }}">장바구니로 돌아가기</a></p></main>
 <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 <script>document.getElementById('find-address').addEventListener('click',function(){if(typeof daum==='undefined'||!daum.Postcode){alert('주소 검색을 불러오지 못했습니다. 직접 입력해 주세요.');return;}new daum.Postcode({oncomplete:function(data){document.getElementById('postal_code').value=data.zonecode;document.getElementById('address').value=data.roadAddress||data.jibunAddress;document.getElementById('address_detail').focus();}}).open();});</script>
+<script>
+(function(){
+ const total={{ total|tojson }}, available={{ (user.point or 0)|tojson }};
+ const input=document.getElementById('use_points'), final=document.getElementById('final-total');
+ const discount=document.getElementById('points-discount'), depositor=document.getElementById('depositor');
+ const submit=document.getElementById('submit-order');
+ const max=Math.min(total,available);
+ function refresh(){
+   let points=Number(input.value);
+   if(!Number.isFinite(points)||points<0) points=0;
+   points=Math.min(Math.floor(points),max);
+   input.value=String(points);
+   const cash=total-points;
+   discount.textContent='-'+points.toLocaleString('ko-KR')+'원';
+   final.textContent=cash.toLocaleString('ko-KR')+'원';
+   depositor.required=cash>0;
+   document.getElementById('bank-info').style.display=cash===0?'none':'';
+   submit.disabled=cash>0 && !{{ 'true' if account else 'false' }};
+   submit.textContent=cash===0?'포인트로 주문 완료':'입금 완료 신고 · 주문 접수';
+ }
+ input.addEventListener('input',refresh);
+ document.getElementById('use-all-points').addEventListener('click',()=>{input.value=String(max);refresh();});
+ refresh();
+})();
+</script>
 </body></html>
