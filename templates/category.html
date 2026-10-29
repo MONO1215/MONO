@@ -21,6 +21,16 @@
 .mono-listing-prices p {display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;margin:5px 0;font-size:13px;line-height:1.5;}
 .mono-listing-prices p span {color:#555;overflow-wrap:anywhere;}
 .mono-listing-prices p strong {white-space:nowrap;color:#111;}
+
+.mono-category-controls{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin:20px 0 24px;padding:16px;border:1px solid #e8e8e8;border-radius:14px;background:#fafafa}
+.mono-category-search{display:flex;gap:8px;flex:1 1 300px;min-width:0}
+.mono-category-search input{flex:1;min-width:0;padding:12px 14px;border:1px solid #ddd;border-radius:9px;background:#fff;font-size:14px}
+.mono-category-search button{border:0;background:#151515;color:#fff;border-radius:9px;padding:11px 18px;font-weight:700;cursor:pointer}
+.mono-category-sort{display:flex;align-items:center;gap:9px;white-space:nowrap}
+.mono-category-sort label{font-size:14px;color:#555}
+.mono-category-sort select{padding:11px 12px;border:1px solid #ddd;border-radius:9px;background:#fff;font-size:14px;max-width:180px}
+.mono-category-status{margin:0 0 16px;color:#666;font-size:14px}
+@media(max-width:640px){.mono-category-controls{padding:12px}.mono-category-search,.mono-category-sort{width:100%}.mono-category-sort select{flex:1;max-width:none}}
 </style>
 </head>
 
@@ -125,8 +135,6 @@
 
             <!-- 로그인 상태 -->
 
-            <a href="{{ url_for('view_cart') }}">장바구니</a>
-
             {% if session.get("user_logged_in") %}
 
                 <a
@@ -179,6 +187,29 @@
 
 
 
+    <!-- 카테고리 내부 검색 및 정렬 -->
+    <div class="mono-category-controls">
+        <form class="mono-category-search" method="get" action="{{ url_for('category_page', category_slug=category_slug) }}" role="search">
+            <input type="search" name="q" value="{{ search_query|default('') }}" maxlength="100"
+                   placeholder="{{ category_name }} 상품 또는 옵션 검색" aria-label="{{ category_name }} 상품 검색">
+            <input type="hidden" name="sort" value="{{ sort|default('recommended') }}">
+            <button type="submit">🔍 검색</button>
+        </form>
+        <form class="mono-category-sort" method="get" action="{{ url_for('category_page', category_slug=category_slug) }}">
+            <input type="hidden" name="q" value="{{ search_query|default('') }}">
+            <label for="category-sort">정렬</label>
+            <select id="category-sort" name="sort" onchange="this.form.submit()">
+                {% for value, label in [('recommended','추천순 (판매량)'),('newest','최신 등록순'),('price_asc','낮은 가격순'),('price_desc','높은 가격순'),('name_asc','이름순 (가나다)'),('name_desc','이름 역순')] %}
+                <option value="{{ value }}" {% if sort|default('recommended') == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <noscript><button type="submit">적용</button></noscript>
+        </form>
+    </div>
+    {% if search_query %}
+    <p class="mono-category-status">‘{{ search_query }}’ 검색 결과 · {{ products|length }}개 상품</p>
+    {% endif %}
+
     <!-- 상품 목록 -->
 
     <section class="products">
@@ -215,7 +246,7 @@
 
             <div class="empty-category">
 
-                등록된 {{ category_name }} 상품이 없습니다.
+                {{ '검색 결과가 없습니다. 다른 검색어를 입력해 주세요.' if search_query else '등록된 ' ~ category_name ~ ' 상품이 없습니다.' }}
 
             </div>
 

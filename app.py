@@ -929,34 +929,68 @@ def all_products():
 
 @app.route("/category/<category_slug>")
 def category_page(category_slug):
-
-    category_name = CATEGORIES.get(
-        category_slug
-    )
-
+    category_name = CATEGORIES.get(category_slug)
     if not category_name:
-        return redirect(
-            url_for("home")
-        )
+        abort(404)
+
+    search_query = request.args.get("q", "").strip()
+    if len(search_query) > 100:
+        abort(400, "검색어는 100자 이내로 입력해 주세요.")
+
+    sort = request.args.get("sort", "recommended")
+    # 정렬 키는 허용 목록만 사용하여 SQL 구문에 사용자 입력이 들어가지 않도록 한다.
+    sort_options = {
+        "recommended": "sold_units DESC, p.id DESC",
+        "price_asc": "min_price ASC NULLS LAST, p.id DESC",
+        "price_desc": "min_price DESC NULLS LAST, p.id DESC",
+        "name_asc": "p.name ASC, p.id DESC",
+        "name_desc": "p.name DESC, p.id DESC",
+        "newest": "p.id DESC",
+    }
+    if sort not in sort_options:
+        sort = "recommended"
+
+    # LIKE 특수문자는 일반 텍스트로 검색한다.
+    slash = chr(92)
+    escaped = (search_query.replace(slash, slash + slash)
+               .replace("%", slash + "%")
+               .replace("_", slash + "_"))
+    pattern = "%" + escaped + "%"
 
     conn = get_db_connection()
-
     try:
-
         with conn.cursor() as cur:
-
             cur.execute("""
-                SELECT *
-                FROM products
-                WHERE category = %s
-                ORDER BY id DESC
-            """, (
-                category_name,
-            ))
-
+                SELECT p.*,
+                    COALESCE(s.units, 0) AS sold_units,
+                    (SELECT MIN(v.price) FROM (
+                        SELECT p.bank_transfer_price AS price
+                        UNION ALL
+                        SELECT o.bank_transfer_price AS price
+                        FROM product_options o WHERE o.product_id = p.id
+                    ) v WHERE v.price > 0) AS min_price
+                FROM products p
+                LEFT JOIN (
+                    SELECT product_id,
+                        SUM(COALESCE(quantity,
+                            CASE WHEN option_name ~ ' × [0-9]+$'
+                                THEN (substring(option_name FROM ' × ([0-9]+)$'))::INTEGER
+                                ELSE 1 END)) AS units
+                    FROM bank_orders
+                    WHERE status = 'paid' AND product_id IS NOT NULL
+                    GROUP BY product_id
+                ) s ON s.product_id = p.id
+                WHERE p.category = %s
+                  AND (%s = '' OR p.name ILIKE %s ESCAPE '\'
+                       OR EXISTS (
+                           SELECT 1 FROM product_options o
+                           WHERE o.product_id = p.id
+                             AND o.option_name ILIKE %s ESCAPE '\'
+                       ))
+                ORDER BY """ + sort_options[sort],
+                (category_name, search_query, pattern, pattern))
             products = cur.fetchall()
             attach_listing_options(cur, products)
-
     finally:
         conn.close()
 
@@ -964,10 +998,8 @@ def category_page(category_slug):
         products = mask_public_prices(products)
 
     return render_template(
-        "category.html",
-        products=products,
-        category_name=category_name,
-        category_slug=category_slug
+        "category.html", products=products, category_name=category_name,
+        category_slug=category_slug, search_query=search_query, sort=sort
     )
 
 
