@@ -4,7 +4,8 @@ from flask import send_file
 import re
 from supabase import create_client
 from uuid import uuid4
-from secrets import token_urlsafe
+from secrets import token_urlsafe, randbelow, compare_digest
+from zoneinfo import ZoneInfo
 
 from flask import (
     Flask,
@@ -379,6 +380,17 @@ def init_db():
             cur.execute("CREATE INDEX IF NOT EXISTS idx_support_tickets_user ON support_tickets(user_id, created_at DESC)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON support_tickets(status, created_at DESC)")
 
+            # 룰렛: 하루 1회 참여를 DB 고유 제약으로 보장
+            cur.execute("""CREATE TABLE IF NOT EXISTS roulette_spins (
+                id BIGSERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                spin_date DATE NOT NULL,
+                reward INTEGER NOT NULL CHECK (reward IN (0, 10, 30, 50, 100, 500)),
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                UNIQUE(user_id, spin_date)
+            )""")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_roulette_spins_user ON roulette_spins(user_id, created_at DESC)")
+
             # 회원별 장바구니: 브라우저 세션이 아닌 DB에 회원 ID로 저장
             cur.execute("""CREATE TABLE IF NOT EXISTS member_cart_items (
                 id BIGSERIAL PRIMARY KEY,
@@ -509,9 +521,10 @@ def home():
 @app.route("/events/<event_key>")
 def event_page(event_key):
     pages = {
-        "roulette": ("랜덤 룰렛", "룰렛 이벤트를 준비 중입니다. 아직 참여하거나 포인트를 받을 수 없습니다."),
         "specials": ("특가 상품", "특가 상품 등록 기능을 준비 중입니다."),
     }
+    if event_key == "roulette":
+        return redirect(url_for("roulette"))
     if event_key == "support":
         return redirect(url_for("customer_support"))
     if event_key == "purchase-review":
@@ -520,6 +533,74 @@ def event_page(event_key):
         abort(404)
     title, message = pages[event_key]
     return render_template("event_page.html", title=title, message=message)
+
+
+# ==================================================
+# 랜덤 룰렛: 서버 추첨 / 회원별 하루 1회 / 원자적 포인트 지급
+# ==================================================
+
+ROULETTE_REWARDS = ((0, 40), (10, 30), (30, 15), (50, 10), (100, 4), (500, 1))
+
+@app.route("/roulette", methods=["GET", "POST"])
+def roulette():
+    if not session.get("user_logged_in") or not session.get("user_id"):
+        return redirect(url_for("login"))
+    user_id = int(session["user_id"])
+    today = datetime.now(ZoneInfo("Asia/Seoul")).date()
+    if "roulette_csrf" not in session:
+        session["roulette_csrf"] = token_urlsafe(32)
+
+    if request.method == "POST":
+        if not compare_digest(request.form.get("csrf_token", ""), session["roulette_csrf"]):
+            return jsonify(ok=False, message="요청이 유효하지 않습니다. 페이지를 새로고침해 주세요."), 403
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cur:
+                # 사용자 행 잠금으로 동시 요청에서도 포인트/참여 여부 일관성 유지
+                cur.execute("SELECT id, point FROM users WHERE id = %s FOR UPDATE", (user_id,))
+                member = cur.fetchone()
+                if not member:
+                    conn.rollback()
+                    return jsonify(ok=False, message="회원정보를 찾을 수 없습니다."), 404
+                cur.execute("SELECT reward FROM roulette_spins WHERE user_id=%s AND spin_date=%s", (user_id, today))
+                if cur.fetchone():
+                    conn.rollback()
+                    return jsonify(ok=False, message="오늘은 이미 룰렛에 참여했습니다."), 409
+                draw = randbelow(100)
+                cumulative = 0
+                reward = 0
+                for points, weight in ROULETTE_REWARDS:
+                    cumulative += weight
+                    if draw < cumulative:
+                        reward = points
+                        break
+                cur.execute("INSERT INTO roulette_spins (user_id, spin_date, reward) VALUES (%s, %s, %s)", (user_id, today, reward))
+                cur.execute("UPDATE users SET point = COALESCE(point, 0) + %s WHERE id=%s RETURNING point", (reward, user_id))
+                new_balance = cur.fetchone()["point"]
+            conn.commit()
+            return jsonify(ok=True, reward=reward, balance=new_balance)
+        except Exception:
+            conn.rollback()
+            app.logger.exception("Roulette spin failed")
+            return jsonify(ok=False, message="참여 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."), 500
+        finally:
+            conn.close()
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT point FROM users WHERE id=%s", (user_id,))
+            member = cur.fetchone()
+            if not member:
+                abort(404)
+            cur.execute("SELECT reward FROM roulette_spins WHERE user_id=%s AND spin_date=%s", (user_id, today))
+            today_spin = cur.fetchone()
+            cur.execute("SELECT spin_date, reward FROM roulette_spins WHERE user_id=%s ORDER BY spin_date DESC LIMIT 10", (user_id,))
+            history = cur.fetchall()
+    finally:
+        conn.close()
+    return render_template("roulette.html", balance=member["point"] or 0,
+                           today_spin=today_spin, history=history, csrf_token=session["roulette_csrf"])
 
 
 # ==================================================
