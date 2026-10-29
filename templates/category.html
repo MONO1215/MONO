@@ -218,9 +218,8 @@
 
 
             {% for product in products %}
-            {% for option in [none] + product["listing_options"] %}
             <div class="product-card">
-                <a href="{{ url_for('product_detail', product_id=product['id'], option=('base' if option is none else 'option-' ~ option['id'])) }}" class="product-main-link">
+                <a href="{{ url_for('product_detail', product_id=product['id'], option='base') }}" class="product-main-link">
                     {% if product['image_file'] %}
                     <img class="product-image-real" src="{{ url_for('static', filename='uploads/products/' + product['image_file']) }}" alt="{{ product['name'] }}">
                     {% elif product['image_url'] %}
@@ -229,18 +228,23 @@
                     <div class="product-image">상품 이미지</div>
                     {% endif %}
                     <p class="product-category">{{ product['category'] }}</p>
-                    <h3>{{ product['name'] }}{% if option is not none %} - {{ option['option_name'] }}{% endif %}</h3>
+                    <h3>{{ product['name'] }}</h3>
                 </a>
                 <div class="store-prices">
                     {% if product['is_sold_out'] %}
                     <p class="product-sold-out"><strong>품절</strong></p>
                     {% else %}
-                        {% set price = product['bank_transfer_price'] if option is none else option['bank_transfer_price'] %}
+                        {% set price_state = namespace(lowest=product['bank_transfer_price']) %}
+                        {% for variant in product['listing_options'] %}
+                            {% if variant['bank_transfer_price'] is not none and (price_state.lowest is none or variant['bank_transfer_price'] < price_state.lowest) %}
+                                {% set price_state.lowest = variant['bank_transfer_price'] %}
+                            {% endif %}
+                        {% endfor %}
+                        {% set price = price_state.lowest %}
                         <p><strong>{% if session.get('user_logged_in') %}{{ '{:,}'.format(price) ~ '원' if price is not none else '가격 문의' }}{% else %}<a href="{{ url_for('login') }}">로그인 후 가격 확인</a>{% endif %}</strong></p>
                     {% endif %}
                 </div>
             </div>
-            {% endfor %}
             {% else %}
 
 
