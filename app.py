@@ -2614,6 +2614,9 @@ def checkout():
                 user = cur.fetchone()
         finally:
             conn.close()
+    if not user:
+        # 탈퇴한 회원이나 유효하지 않은 로그인 세션으로 주문할 수 없도록 확인
+        return redirect(url_for("login"))
     if request.method == "POST":
         if request.form.get("csrf_token") != session.get("order_csrf") or not session.get("order_csrf"):
             abort(403)
