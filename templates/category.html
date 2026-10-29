@@ -205,7 +205,7 @@
                     <p class="product-sold-out"><strong>품절</strong></p>
                     {% else %}
                         {% set price = product['bank_transfer_price'] if option is none else option['bank_transfer_price'] %}
-                        <p><strong>{{ '{:,}'.format(price) ~ '원' if price is not none else '가격 문의' }}</strong></p>
+                        <p><strong>{% if session.get('user_logged_in') %}{{ '{:,}'.format(price) ~ '원' if price is not none else '가격 문의' }}{% else %}<a href="{{ url_for('login') }}">로그인 후 가격 확인</a>{% endif %}</strong></p>
                     {% endif %}
                 </div>
             </div>

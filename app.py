@@ -359,6 +359,16 @@ _db_initialized = False
 
 
 @app.before_request
+def require_member_for_purchase():
+    """가격/주문 데이터는 비회원에게 제공하지 않는다."""
+    protected = {"view_cart", "add_to_cart", "update_cart", "checkout", "create_bank_order"}
+    if request.endpoint in protected and not session.get("user_logged_in"):
+        if request.path.startswith("/api/"):
+            return jsonify(error="회원 로그인 후 주문할 수 있습니다."), 401
+        return redirect(url_for("login"))
+
+
+@app.before_request
 def ensure_database():
 
     global _db_initialized
@@ -368,6 +378,22 @@ def ensure_database():
         _db_initialized = True
 
 
+
+
+def mask_public_prices(products):
+    """상품 이름/이미지는 공개하되 가격 필드는 템플릿에 전달하지 않는다."""
+    masked = []
+    for item in products:
+        p = dict(item)
+        for key in list(p):
+            if "price" in key.lower():
+                p[key] = None
+        p["listing_options"] = [
+            {k: (None if "price" in k.lower() else v) for k, v in dict(opt).items()}
+            for opt in p.get("listing_options", [])
+        ]
+        masked.append(p)
+    return masked
 
 
 def attach_listing_options(cur, products):
@@ -412,6 +438,9 @@ def home():
     finally:
         conn.close()
 
+    if not session.get("user_logged_in"):
+        products = mask_public_prices(products)
+
     return render_template(
         "index.html",
         products=products
@@ -442,6 +471,9 @@ def all_products():
 
     finally:
         conn.close()
+
+    if not session.get("user_logged_in"):
+        products = mask_public_prices(products)
 
     return render_template(
         "index.html",
@@ -485,6 +517,9 @@ def category_page(category_slug):
 
     finally:
         conn.close()
+
+    if not session.get("user_logged_in"):
+        products = mask_public_prices(products)
 
     return render_template(
         "category.html",
@@ -567,6 +602,13 @@ def product_detail(product_id):
     finally:
 
         conn.close()
+
+    if not session.get("user_logged_in"):
+        product = {k: (None if "price" in k.lower() else v) for k, v in dict(product).items()}
+        options = [
+            {k: (None if "price" in k.lower() else v) for k, v in dict(opt).items()}
+            for opt in options
+        ]
 
     return render_template(
         "product_detail.html",

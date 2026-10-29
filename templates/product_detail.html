@@ -103,6 +103,7 @@
                         <strong class="mono-store-price" id="mono-current-price">가격 확인 중</strong>
                         <p class="mono-bank-notice" id="mono-price-notice"></p>
                     </div>
+                    {% if session.get('user_logged_in') %}
                     <form id="mono-cart-form" action="{{ url_for('add_to_cart') }}" method="post">
                         <input type="hidden" name="csrf_token" value="{{ order_csrf }}">
                         <input type="hidden" name="product_id" value="{{ product['id'] }}">
@@ -117,6 +118,9 @@
                             <a class="mono-buy-link mono-view-cart" href="{{ url_for('view_cart') }}">장바구니 보기</a>
                         </div>
                     </form>
+                    {% else %}
+                    <p><a class="mono-buy-link" href="{{ url_for('login') }}">로그인 후 가격 확인 및 주문</a></p>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -162,14 +166,15 @@
         const price = document.getElementById('mono-current-price');
         const notice = document.getElementById('mono-price-notice');
         const form = document.getElementById('mono-cart-form');
+        const isMember = {{ session.get('user_logged_in', False) | tojson }};
         const selectedLabel = document.getElementById('mono-selected-option');
         const validPrice = chosen && chosen.bank_transfer_price !== null &&
             chosen.bank_transfer_price !== undefined && Number(chosen.bank_transfer_price) > 0;
         document.getElementById('cart-option-id').value = chosen && chosen.option_id !== null ? chosen.option_id : '';
         selectedLabel.textContent = chosen ? '선택한 옵션: ' + chosen.name : '등록된 상품 옵션이 없습니다.';
-        price.textContent = isSoldOut ? '품절' : (validPrice ? Number(chosen.bank_transfer_price).toLocaleString('ko-KR') + '원' : '가격 문의');
+        price.textContent = !isMember ? '로그인 후 가격 확인' : (isSoldOut ? '품절' : (validPrice ? Number(chosen.bank_transfer_price).toLocaleString('ko-KR') + '원' : '가격 문의'));
         notice.textContent = isSoldOut ? '현재 구매할 수 없는 상품입니다.' : (!validPrice ? '판매가가 등록되지 않았습니다.' : '');
-        form.hidden = isSoldOut || !validPrice;
+        if (form) form.hidden = isSoldOut || !validPrice;
     }
     select.addEventListener('change', renderOption);
     renderOption();
