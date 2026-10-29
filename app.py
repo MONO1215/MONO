@@ -338,6 +338,19 @@ def init_db():
             cur.execute("ALTER TABLE bank_orders ADD COLUMN IF NOT EXISTS address_detail TEXT")
             cur.execute("ALTER TABLE bank_orders ADD COLUMN IF NOT EXISTS user_id INTEGER")
 
+            # 회원별 장바구니: 브라우저 세션이 아닌 DB에 회원 ID로 저장
+            cur.execute("""CREATE TABLE IF NOT EXISTS member_cart_items (
+                id BIGSERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+                option_id INTEGER REFERENCES product_options(id) ON DELETE CASCADE,
+                quantity INTEGER NOT NULL CHECK (quantity BETWEEN 1 AND 20),
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )""")
+            cur.execute("""CREATE UNIQUE INDEX IF NOT EXISTS idx_member_cart_unique
+                ON member_cart_items (user_id, product_id, COALESCE(option_id, 0))""")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_member_cart_user ON member_cart_items(user_id)")
+
             # 기존 회원 정보를 유지하면서 배송지 컬럼 추가
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS postal_code VARCHAR(10)")
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT")
@@ -941,6 +954,7 @@ def login():
             )
         ):
 
+            session.pop("mono_cart", None)
             session["user_logged_in"] = True
             session["user_id"] = user["id"]
             session["username"] = user["username"]
@@ -2526,75 +2540,129 @@ def delete_product(product_id):
 # ==================================================
 
 def cart_lines():
-    cart = session.get("mono_cart", [])
-    lines = []
+    """로그인한 회원 본인의 장바구니만 조회한다. 가격은 DB에서 재검증한다."""
+    user_id = session.get("user_id")
+    if not session.get("user_logged_in") or not user_id:
+        return []
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
-            for item in cart[:30]:
-                pid, oid, qty = item["product_id"], item.get("option_id"), item["quantity"]
-                cur.execute("SELECT id,name,image_url,bank_transfer_price,is_sold_out FROM products WHERE id=%s", (pid,))
-                product = cur.fetchone()
-                if not product or product["is_sold_out"]: continue
-                price, name = product["bank_transfer_price"], "기본 상품"
-                if oid is not None:
-                    cur.execute("SELECT option_name,bank_transfer_price FROM product_options WHERE id=%s AND product_id=%s", (oid,pid))
-                    opt=cur.fetchone()
-                    if not opt: continue
-                    price,name=opt["bank_transfer_price"],opt["option_name"]
-                if price is None or price <= 0: continue
-                lines.append(dict(product_id=pid,option_id=oid,product_name=product["name"],option_name=name,image_url=product["image_url"],price=price,quantity=qty,subtotal=price*qty))
-    finally: conn.close()
-    return lines
+            cur.execute("""SELECT c.id AS cart_id, c.product_id, c.option_id, c.quantity,
+                p.name AS product_name, p.image_url,
+                CASE WHEN c.option_id IS NULL THEN '기본 상품' ELSE o.option_name END AS option_name,
+                CASE WHEN c.option_id IS NULL THEN p.bank_transfer_price ELSE o.bank_transfer_price END AS price
+                FROM member_cart_items c
+                JOIN products p ON p.id = c.product_id
+                LEFT JOIN product_options o ON o.id = c.option_id AND o.product_id = c.product_id
+                WHERE c.user_id = %s AND p.is_sold_out = FALSE
+                AND (c.option_id IS NULL OR o.id IS NOT NULL)
+                ORDER BY c.id ASC LIMIT 30""", (user_id,))
+            rows = cur.fetchall()
+        return [dict(product_id=r['product_id'], option_id=r['option_id'],
+                     product_name=r['product_name'], option_name=r['option_name'],
+                     image_url=r['image_url'], price=r['price'], quantity=r['quantity'],
+                     subtotal=r['price']*r['quantity'])
+                for r in rows if r['price'] is not None and r['price'] > 0]
+    finally:
+        conn.close()
+
 
 @app.route("/cart")
 def view_cart():
-    lines=cart_lines()
-    return render_template("cart.html", lines=lines, total=sum(x["subtotal"] for x in lines), csrf=get_order_csrf())
+    lines = cart_lines()
+    return render_template("cart.html", lines=lines,
+                           total=sum(x["subtotal"] for x in lines), csrf=get_order_csrf())
+
 
 @app.route("/cart/add", methods=["POST"])
 def add_to_cart():
     if request.form.get("csrf_token") != session.get("order_csrf") or not session.get("order_csrf"):
         abort(403)
     try:
-        pid=int(request.form["product_id"])
-        oid=int(request.form["option_id"]) if request.form.get("option_id") else None
-        qty=int(request.form.get("quantity",1))
-        if not (1<=qty<=20): raise ValueError()
-    except (ValueError, KeyError): abort(400)
-    cart=list(session.get("mono_cart",[]))
-    # 서버 가격 검증을 위해 선택 항목을 임시로 추가하여 확인
-    candidate={"product_id":pid,"option_id":oid,"quantity":qty}
-    previous=session.get("mono_cart",[])
-    session["mono_cart"]=[candidate]
-    valid=bool(cart_lines())
-    session["mono_cart"]=previous
-    if not valid: abort(400)
-    for item in cart:
-        if item["product_id"]==pid and item.get("option_id")==oid:
-            item["quantity"]=min(20,item["quantity"]+qty)
-            break
-    else:
-        if len(cart)>=30: abort(400)
-        cart.append(candidate)
-    session["mono_cart"]=cart
-    session.modified=True
-    return redirect(url_for("checkout") if request.form.get("mode")=="buy" else url_for("view_cart"))
+        pid = int(request.form["product_id"])
+        oid = int(request.form["option_id"]) if request.form.get("option_id") else None
+        qty = int(request.form.get("quantity", 1))
+        if not (1 <= qty <= 20):
+            raise ValueError()
+    except (ValueError, KeyError):
+        abort(400)
+    user_id = session.get("user_id")
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT bank_transfer_price, is_sold_out FROM products WHERE id=%s", (pid,))
+            product = cur.fetchone()
+            if not product or product['is_sold_out']:
+                abort(400, "판매 중인 상품이 아닙니다.")
+            price = product['bank_transfer_price']
+            if oid is not None:
+                cur.execute("SELECT bank_transfer_price FROM product_options WHERE id=%s AND product_id=%s", (oid, pid))
+                option = cur.fetchone()
+                if not option:
+                    abort(400, "옵션을 찾을 수 없습니다.")
+                price = option['bank_transfer_price']
+            if price is None or price <= 0:
+                abort(400, "판매가격이 없는 상품입니다.")
+            cur.execute("SELECT COUNT(*) AS n FROM member_cart_items WHERE user_id=%s", (user_id,))
+            count = cur.fetchone()['n']
+            cur.execute("SELECT id FROM member_cart_items WHERE user_id=%s AND product_id=%s AND option_id IS NOT DISTINCT FROM %s", (user_id,pid,oid))
+            existing = cur.fetchone()
+            if not existing and count >= 30:
+                abort(400, "장바구니는 최대 30개 상품까지 담을 수 있습니다.")
+            cur.execute("""INSERT INTO member_cart_items (user_id, product_id, option_id, quantity)
+                VALUES (%s,%s,%s,%s)
+                ON CONFLICT (user_id, product_id, (COALESCE(option_id, 0)))
+                DO UPDATE SET quantity = LEAST(20, member_cart_items.quantity + EXCLUDED.quantity)""",
+                (user_id, pid, oid, qty))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return redirect(url_for("checkout") if request.form.get("mode") == "buy" else url_for("view_cart"))
+
 
 @app.route("/cart/update", methods=["POST"])
 def update_cart():
-    if request.form.get("csrf_token") != session.get("order_csrf"): abort(403)
+    if request.form.get("csrf_token") != session.get("order_csrf") or not session.get("order_csrf"):
+        abort(403)
     try:
-        index=int(request.form.get("index"))
-        quantity=int(request.form.get("quantity"))
-    except (TypeError,ValueError): abort(400)
-    cart=list(session.get("mono_cart",[]))
-    if not 0<=index<len(cart) or not 0<=quantity<=20: abort(400)
-    if quantity==0: cart.pop(index)
-    else: cart[index]["quantity"]=quantity
-    session["mono_cart"]=cart
-    session.modified=True
+        index = int(request.form.get("index"))
+        quantity = int(request.form.get("quantity"))
+    except (TypeError, ValueError):
+        abort(400)
+    if not 0 <= quantity <= 20:
+        abort(400)
+    user_id = session.get("user_id")
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            # cart.html은 화면에 표시된 행의 0부터 시작하는 인덱스를 제출한다.
+            # 조회 시 숨겨지는 품절/가격 미등록 항목은 제외해 같은 순서를 유지한다.
+            cur.execute("""SELECT c.id FROM member_cart_items c
+                JOIN products p ON p.id=c.product_id
+                LEFT JOIN product_options o ON o.id=c.option_id AND o.product_id=c.product_id
+                WHERE c.user_id=%s AND p.is_sold_out=FALSE
+                AND (c.option_id IS NULL OR o.id IS NOT NULL)
+                AND (CASE WHEN c.option_id IS NULL THEN p.bank_transfer_price ELSE o.bank_transfer_price END)>0
+                ORDER BY c.id ASC LIMIT 30""", (user_id,))
+            rows = cur.fetchall()
+            if not 0 <= index < len(rows):
+                abort(400)
+            cart_id = rows[index]['id']
+            if quantity == 0:
+                cur.execute("DELETE FROM member_cart_items WHERE id=%s AND user_id=%s", (cart_id, user_id))
+            else:
+                cur.execute("UPDATE member_cart_items SET quantity=%s WHERE id=%s AND user_id=%s", (quantity,cart_id,user_id))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
     return redirect(url_for("view_cart"))
+
 
 @app.route("/checkout", methods=["GET", "POST"])
 def checkout():
@@ -2660,7 +2728,14 @@ def checkout():
                 raise
             finally:
                 conn.close()
-            session.pop("mono_cart", None)
+            # 주문 성공 후 현재 회원의 장바구니만 비운다.
+            cleanup_conn = get_db_connection()
+            try:
+                with cleanup_conn.cursor() as cleanup_cur:
+                    cleanup_cur.execute("DELETE FROM member_cart_items WHERE user_id=%s", (user_id,))
+                cleanup_conn.commit()
+            finally:
+                cleanup_conn.close()
             return render_template("checkout_success.html", ids=ids, total=total)
     return render_template(
         "checkout.html", lines=lines, total=total, csrf=get_order_csrf(),
