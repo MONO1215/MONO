@@ -1,8 +1,9 @@
-MONO 배송지 주문 연동
+MONO 회원 관리 + 최신 엑셀 자동 반영
 
-파일: app.py, templates/register.html, templates/edit_profile.html, templates/checkout.html
+1. app.py 를 프로젝트 루트에 덮어쓰기
+2. templates/admin.html 및 templates/admin_members.html 적용
+3. requirements.txt에 openpyxl 추가 (없으면)
+4. Git push 후 /admin/members 방문
 
-기능: 회원 배송지 자동 입력, 비회원 배송지 직접 입력, 주문별 배송지 저장.
-기존 bank_orders에는 새 배송지 컬럼이 자동 추가됩니다. 기존 주문 배송지 값은 NULL입니다.
-관리자 주문 목록 템플릿(admin_orders.html)은 제공되지 않아 화면 출력은 수정하지 않았습니다.
-주의: 실제 데이터베이스 연결 테스트 및 운영 배포는 수행하지 않았습니다.
+회원 정보는 PostgreSQL에 저장되며 엑셀 다운로드할 때마다 최신 정보로 생성됩니다.
+로컬 PC에 이미 다운로드한 파일이 자동 변경되지는 않습니다.

@@ -1,4 +1,6 @@
 import traceback
+from io import BytesIO
+from flask import send_file
 import re
 from supabase import create_client
 from uuid import uuid4
@@ -1492,6 +1494,91 @@ def admin_logout():
 
     return redirect(
         url_for("admin_login")
+    )
+
+
+
+# ==================================================
+# 관리자 회원 관리 / 최신 엑셀 내보내기
+# PostgreSQL을 원본으로 사용하므로 가입 및 정보 수정 내용이
+# 별도의 파일 동기화 없이 다운로드 시 항상 반영됩니다.
+# ==================================================
+
+MEMBER_EXPORT_COLUMNS = [
+    ("id", "회원번호"), ("name", "이름"), ("username", "아이디"),
+    ("phone", "전화번호"), ("email", "이메일"),
+    ("postal_code", "우편번호"), ("address", "배송지 주소"),
+    ("address_detail", "상세 주소"), ("level", "레벨"),
+    ("point", "포인트"), ("exp", "경험치(EXP)"),
+    ("created_at", "가입일"),
+]
+
+
+def get_admin_members():
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""SELECT id, name, username, phone, email,
+                           postal_code, address, address_detail,
+                           level, point, exp, created_at
+                           FROM users ORDER BY id DESC""")
+            return cur.fetchall()
+    finally:
+        conn.close()
+
+
+@app.route("/admin/members")
+@admin_login_required
+def admin_members():
+    members = get_admin_members()
+    return render_template("admin_members.html", members=members)
+
+
+@app.route("/admin/members/export.xlsx")
+@admin_login_required
+def admin_members_export():
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.utils import get_column_letter
+
+    members = get_admin_members()
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "회원 명단"
+    sheet.append([label for _, label in MEMBER_EXPORT_COLUMNS])
+    for member in members:
+        values = []
+        for key, _ in MEMBER_EXPORT_COLUMNS:
+            value = member.get(key)
+            # 사용자 입력을 엑셀 수식으로 해석하지 않도록 방지
+            if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@")):
+                value = "'" + value
+            if key in ("phone", "postal_code") and value is not None:
+                value = str(value)
+            if isinstance(value, datetime) and value.tzinfo is not None:
+                value = value.replace(tzinfo=None)
+            values.append(value)
+        sheet.append(values)
+    sheet.freeze_panes = "A2"
+    sheet.auto_filter.ref = sheet.dimensions
+    for cell in sheet[1]:
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor="1F2937")
+        cell.alignment = Alignment(horizontal="center")
+    widths = [12, 16, 20, 20, 32, 14, 45, 32, 12, 14, 16, 23]
+    for idx, width in enumerate(widths, start=1):
+        sheet.column_dimensions[get_column_letter(idx)].width = width
+    for row in sheet.iter_rows(min_row=2):
+        for index in (3, 5):
+            row[index].number_format = "@"  # 전화번호 / 우편번호
+    stream = BytesIO()
+    workbook.save(stream)
+    stream.seek(0)
+    return send_file(
+        stream,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name="MONO_members_" + date.today().strftime("%Y%m%d") + ".xlsx",
     )
 
 
