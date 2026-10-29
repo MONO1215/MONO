@@ -351,6 +351,18 @@ def init_db():
             cur.execute("ALTER TABLE bank_orders ADD CONSTRAINT bank_orders_point_nonnegative CHECK (point_used >= 0)" ) if False else None
             cur.execute("CREATE INDEX IF NOT EXISTS idx_bank_orders_group ON bank_orders(order_group_id)")
 
+            # 실제 결제 완료 주문 1개당 구매 인증 1개만 등록
+            cur.execute("""CREATE TABLE IF NOT EXISTS purchase_reviews (
+                id BIGSERIAL PRIMARY KEY,
+                order_id BIGINT NOT NULL UNIQUE REFERENCES bank_orders(id) ON DELETE RESTRICT,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                rating SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+                content TEXT NOT NULL CHECK (char_length(content) BETWEEN 10 AND 1000),
+                image_url TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )""")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_purchase_reviews_user ON purchase_reviews(user_id, created_at DESC)")
+
             # 회원별 장바구니: 브라우저 세션이 아닌 DB에 회원 ID로 저장
             cur.execute("""CREATE TABLE IF NOT EXISTS member_cart_items (
                 id BIGSERIAL PRIMARY KEY,
@@ -481,15 +493,119 @@ def home():
 @app.route("/events/<event_key>")
 def event_page(event_key):
     pages = {
-        "purchase-review": ("구매 인증", "구매 후기·인증 기능을 준비 중입니다."),
         "roulette": ("랜덤 룰렛", "룰렛 이벤트를 준비 중입니다. 아직 참여하거나 포인트를 받을 수 없습니다."),
         "support": ("고객센터", "문의 및 상담 접수 기능을 준비 중입니다."),
         "specials": ("특가 상품", "특가 상품 등록 기능을 준비 중입니다."),
     }
+    if event_key == "purchase-review":
+        return redirect(url_for("purchase_reviews"))
     if event_key not in pages:
         abort(404)
     title, message = pages[event_key]
     return render_template("event_page.html", title=title, message=message)
+
+
+# ==================================================
+# 구매 인증: 결제 완료된 본인 주문만 작성 가능
+# ==================================================
+
+@app.route("/purchase-reviews", methods=["GET", "POST"])
+def purchase_reviews():
+    if not session.get("user_logged_in") or not session.get("user_id"):
+        return redirect(url_for("login"))
+    user_id = session["user_id"]
+    if "review_csrf" not in session:
+        session["review_csrf"] = token_urlsafe(32)
+    error = None
+    success = request.args.get("submitted") == "1"
+
+    if request.method == "POST":
+        from hmac import compare_digest
+        if not compare_digest(request.form.get("csrf_token", ""), session["review_csrf"]):
+            abort(403)
+        try:
+            order_id = int(request.form.get("order_id", ""))
+            rating = int(request.form.get("rating", ""))
+        except (TypeError, ValueError):
+            order_id, rating = 0, 0
+        content = request.form.get("content", "").strip()
+        photo = request.files.get("photo")
+        if not 1 <= rating <= 5 or not 10 <= len(content) <= 1000 or order_id <= 0:
+            error = "구매 상품, 별점(1~5점), 후기(10~1000자)를 확인해 주세요."
+        elif photo and photo.filename:
+            # 이미지 MIME뿐 아니라 실제 파일 헤더와 크기도 검증한다.
+            photo.stream.seek(0, 2)
+            size = photo.stream.tell()
+            photo.stream.seek(0)
+            header = photo.stream.read(16)
+            photo.stream.seek(0)
+            valid_image = (header.startswith(b"\xff\xd8\xff") or
+                           header.startswith(b"\x89PNG\r\n\x1a\n") or
+                           (header.startswith(b"RIFF") and header[8:12] == b"WEBP"))
+            if size > 5 * 1024 * 1024 or not valid_image:
+                error = "사진은 JPG, PNG, WEBP 형식의 5MB 이하 파일만 가능합니다."
+            else:
+                photo.mimetype = ("image/jpeg" if header.startswith(b"\xff\xd8\xff")
+                                  else "image/png" if header.startswith(b"\x89PNG") else "image/webp")
+                photo.filename = "review" + (".jpg" if photo.mimetype == "image/jpeg" else
+                                             ".png" if photo.mimetype == "image/png" else ".webp")
+        if not error:
+            conn = get_db_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("""SELECT id FROM bank_orders
+                                   WHERE id=%s AND user_id=%s AND status='paid'""",
+                                (order_id, user_id))
+                    eligible = cur.fetchone()
+                    cur.execute("SELECT 1 FROM purchase_reviews WHERE order_id=%s", (order_id,))
+                    already = cur.fetchone()
+                if not eligible:
+                    error = "결제 완료된 본인 주문만 구매 인증할 수 있습니다."
+                elif already:
+                    error = "이미 구매 인증을 작성한 상품입니다."
+                else:
+                    image_url = None
+                    if photo and photo.filename:
+                        image_url = upload_product_image(photo, folder="purchase-reviews")
+                    with conn.cursor() as cur:
+                        cur.execute("""INSERT INTO purchase_reviews
+                                       (order_id, user_id, rating, content, image_url)
+                                       SELECT b.id, %s, %s, %s, %s FROM bank_orders b
+                                       WHERE b.id=%s AND b.user_id=%s AND b.status='paid'
+                                       ON CONFLICT (order_id) DO NOTHING RETURNING id""",
+                                    (user_id, rating, content, image_url, order_id, user_id))
+                        created = cur.fetchone()
+                    if created:
+                        conn.commit()
+                        return redirect(url_for("purchase_reviews", submitted="1"))
+                    conn.rollback()
+                    error = "해당 주문의 인증을 등록할 수 없습니다. 주문 상태를 확인해 주세요."
+            except Exception:
+                conn.rollback()
+                app.logger.exception("구매 인증 등록 오류")
+                error = "구매 인증 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
+            finally:
+                conn.close()
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""SELECT b.id, b.product_name, b.option_name, b.paid_at
+                           FROM bank_orders b
+                           LEFT JOIN purchase_reviews r ON r.order_id=b.id
+                           WHERE b.user_id=%s AND b.status='paid' AND r.id IS NULL
+                           ORDER BY b.paid_at DESC NULLS LAST, b.id DESC LIMIT 100""", (user_id,))
+            eligible_orders = cur.fetchall()
+            cur.execute("""SELECT r.id, r.rating, r.content, r.image_url, r.created_at,
+                                  b.product_name, b.option_name, b.status
+                           FROM purchase_reviews r JOIN bank_orders b ON b.id=r.order_id
+                           WHERE r.user_id=%s ORDER BY r.created_at DESC LIMIT 100""", (user_id,))
+            my_reviews = cur.fetchall()
+    finally:
+        conn.close()
+    return render_template("purchase_reviews.html", eligible_orders=eligible_orders,
+                           my_reviews=my_reviews, error=error, success=success,
+                           csrf_token=session["review_csrf"])
 
 
 # ==================================================

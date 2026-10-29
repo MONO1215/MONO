@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>구매 인증 | MONO</title><link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+.review-wrap{max-width:950px;margin:45px auto 90px;padding:0 20px;color:#111}.review-wrap h1{font-size:32px;margin-bottom:8px}
+.review-sub{color:#777;margin-bottom:32px}.review-panel{border:1px solid #e4e4e4;border-radius:14px;padding:28px;margin:20px 0;background:#fff}
+.review-panel h2{margin:0 0 18px;font-size:22px}.review-form label{display:block;font-weight:700;margin:18px 0 7px}
+.review-form select,.review-form textarea,.review-form input[type=file]{width:100%;max-width:100%;box-sizing:border-box;padding:12px;border:1px solid #ccc;border-radius:8px;background:white;font:inherit}
+.review-form textarea{min-height:150px;resize:vertical}.review-submit{background:#111;color:white;border:0;border-radius:8px;padding:14px 24px;font-weight:700;cursor:pointer;margin-top:20px}
+.review-note{color:#777;font-size:13px;line-height:1.7}.review-alert{padding:14px;border-radius:8px;margin:16px 0}.review-error{background:#fff0f0;color:#a32121}.review-success{background:#eff9f1;color:#20642e}
+.review-entry{border-top:1px solid #eee;padding:20px 0}.review-entry:first-of-type{border-top:0}.review-entry h3{margin:0 0 8px;font-size:17px}.review-entry p{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7}
+.review-entry img{max-width:250px;max-height:260px;object-fit:contain;border-radius:8px}.review-meta{color:#777;font-size:13px}.review-empty{color:#777}
+@media(max-width:650px){.review-panel{padding:18px}.review-wrap{margin-top:25px}}
+</style></head><body>
+<header><div class="header-container"><a class="logo" href="{{ url_for('home') }}">MONO</a><nav>
+<a href="{{ url_for('home') }}">홈</a><a href="{{ url_for('all_products') }}">전체상품</a><a href="{{ url_for('view_cart') }}">장바구니</a>
+<a href="{{ url_for('profile') }}">내 정보</a><a href="{{ url_for('logout') }}">로그아웃</a>
+</nav></div></header>
+<main class="review-wrap"><h1>🛍️ 구매 인증</h1><p class="review-sub">MONO에서 구매한 상품의 사용 경험을 공유해 주세요.</p>
+{% if error %}<div class="review-alert review-error" role="alert">{{ error }}</div>{% endif %}
+{% if success %}<div class="review-alert review-success" role="status">구매 인증이 등록되었습니다.</div>{% endif %}
+<section class="review-panel"><h2>구매 후기 작성</h2>
+{% if eligible_orders %}
+<form class="review-form" method="post" enctype="multipart/form-data">
+<input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+<label for="order_id">인증할 구매 상품</label><select name="order_id" id="order_id" required>
+<option value="">구매 완료 상품을 선택하세요</option>
+{% for order in eligible_orders %}<option value="{{ order.id }}" {% if request.form.get('order_id') == order.id|string %}selected{% endif %}>{{ order.product_name }} / {{ order.option_name }} (주문 #{{ order.id }})</option>{% endfor %}
+</select>
+<label for="rating">별점</label><select name="rating" id="rating" required><option value="">선택해 주세요</option>
+{% for star in range(5,0,-1) %}<option value="{{ star }}" {% if request.form.get('rating') == star|string %}selected{% endif %}>{{ '★' * star }}{{ '☆' * (5-star) }} ({{ star }}점)</option>{% endfor %}</select>
+<label for="content">구매 후기</label><textarea id="content" name="content" minlength="10" maxlength="1000" required placeholder="실제 사용 경험을 10자 이상 작성해 주세요.">{{ request.form.get('content','') }}</textarea>
+<label for="photo">인증 사진 (선택)</label><input type="file" id="photo" name="photo" accept="image/jpeg,image/png,image/webp">
+<p class="review-note">JPG·PNG·WEBP / 최대 5MB. 구매 완료된 주문 항목당 1회 작성할 수 있습니다. 개인정보가 보이는 사진은 올리지 마세요.</p>
+<button class="review-submit" type="submit">구매 인증 등록</button></form>
+{% else %}<p class="review-empty">현재 인증 가능한 결제 완료 상품이 없습니다. 주문이 결제 완료 상태로 변경되면 이곳에 나타납니다.</p>{% endif %}
+</section>
+<section class="review-panel"><h2>내 구매 인증 내역</h2>
+{% for review in my_reviews %}<article class="review-entry"><h3>{{ review.product_name }} / {{ review.option_name }}</h3>
+<div class="review-meta">{{ review.created_at.strftime('%Y-%m-%d') }} · {{ '★' * review.rating }}{{ '☆' * (5-review.rating) }}{% if review.status != 'paid' %} · 주문 상태 변경됨{% endif %}</div>
+<p>{{ review.content }}</p>{% if review.image_url %}<img src="{{ review.image_url }}" alt="구매 인증 사진" loading="lazy">{% endif %}
+</article>{% else %}<p class="review-empty">아직 작성한 구매 인증이 없습니다.</p>{% endfor %}
+</section></main><footer><p>© 2026 MONO. All rights reserved.</p></footer></body></html>
