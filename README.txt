@@ -1,9 +1,6 @@
-MONO 회원 관리 + 최신 엑셀 자동 반영
+MONO 장바구니 상단 메뉴 통일
 
-1. app.py 를 프로젝트 루트에 덮어쓰기
-2. templates/admin.html 및 templates/admin_members.html 적용
-3. requirements.txt에 openpyxl 추가 (없으면)
-4. Git push 후 /admin/members 방문
-
-회원 정보는 PostgreSQL에 저장되며 엑셀 다운로드할 때마다 최신 정보로 생성됩니다.
-로컬 PC에 이미 다운로드한 파일이 자동 변경되지는 않습니다.
+1. templates/cart.html 파일을 프로젝트의 templates/cart.html에 덮어씁니다.
+2. 메인 index.html의 헤더 메뉴를 동일하게 반영했습니다.
+3. 기존 장바구니 수량 변경/삭제/주문 폼은 유지합니다.
+4. static/css/style.css 파일이 기존 프로젝트에 있어야 메인과 같은 헤더 스타일이 적용됩니다.

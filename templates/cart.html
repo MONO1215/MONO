@@ -1,4 +1,86 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>장바구니 | MONO</title><style>body{font-family:Arial,sans-serif;margin:0;color:#151515;background:#fafafa}main{max-width:850px;margin:40px auto;padding:0 18px}a{color:inherit}header{padding:20px;background:#fff;border-bottom:1px solid #eee}header a{margin-right:18px;text-decoration:none}.card{background:white;padding:22px;border:1px solid #ddd;border-radius:12px;margin:12px 0}.row{display:flex;justify-content:space-between;gap:16px;align-items:center}.btn{background:#111;color:white;border:0;border-radius:8px;padding:12px 20px;cursor:pointer;text-decoration:none;display:inline-block}.muted{color:#777}.total{font-size:23px;font-weight:bold;text-align:right}input{padding:10px;border:1px solid #ccc;border-radius:6px}.cart-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}.cart-actions form{display:flex;gap:6px;align-items:center}.cart-actions button{padding:10px 12px;border:1px solid #ccc;border-radius:6px;background:#fff}.cart-actions .delete-btn{background:#111;color:#fff;border-color:#111}button{cursor:pointer}@media(max-width:540px){.row{flex-wrap:wrap}}</style></head><body><header><a href="/">MONO</a><a href="/products">상품 목록</a><a href="{{ url_for('view_cart') }}">장바구니</a></header><main><h1>장바구니</h1>{% for item in lines %}<div class="card"><div class="row"><div><strong>{{ item.product_name }}</strong><p class="muted">{{ item.option_name }}</p><p>{{ '{:,}'.format(item.price) }}원 × {{ item.quantity }}개</p></div><div><strong>{{ '{:,}'.format(item.subtotal) }}원</strong><div class="cart-actions">
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>장바구니 | MONO</title><link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"><style>body{font-family:Arial,sans-serif;margin:0;color:#151515;background:#fafafa}main{max-width:850px;margin:40px auto;padding:0 18px}a{color:inherit}.card{background:white;padding:22px;border:1px solid #ddd;border-radius:12px;margin:12px 0}.row{display:flex;justify-content:space-between;gap:16px;align-items:center}.btn{background:#111;color:white;border:0;border-radius:8px;padding:12px 20px;cursor:pointer;text-decoration:none;display:inline-block}.muted{color:#777}.total{font-size:23px;font-weight:bold;text-align:right}input{padding:10px;border:1px solid #ccc;border-radius:6px}.cart-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}.cart-actions form{display:flex;gap:6px;align-items:center}.cart-actions button{padding:10px 12px;border:1px solid #ccc;border-radius:6px;background:#fff}.cart-actions .delete-btn{background:#111;color:#fff;border-color:#111}button{cursor:pointer}@media(max-width:540px){.row{flex-wrap:wrap}}.header-container{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}.header-container nav{display:flex;align-items:center;flex-wrap:wrap;gap:14px}.header-container nav a{white-space:nowrap}@media(max-width:760px){.header-container nav{gap:10px}} </style></head><body><header>
+
+    <div class="header-container">
+
+        <a href="/" class="logo">
+            MONO
+        </a>
+
+        <nav>
+
+            <a href="/">
+                홈
+            </a>
+
+            <a href="/products">
+                전체상품
+            </a>
+
+            <a href="/category/fashion">
+                패션의류/잡화
+            </a>
+
+            <a href="/category/food">
+                식품
+            </a>
+
+            <a href="/category/kitchen">
+                주방용품
+            </a>
+
+            <a href="/category/living">
+                생활용품
+            </a>
+
+            <a href="/category/hobby">
+                취미용품
+            </a>
+
+            <a href="/category/car">
+                자동차용품
+            </a>
+
+            <a href="/category/office">
+                사무용품
+            </a>
+
+            <a href="/category/sports">
+                스포츠용품
+            </a>
+
+
+            <a href="{{ url_for('view_cart') }}">장바구니</a>
+
+            {% if session.get("user_logged_in") %}
+
+                <a
+                    href="{{ url_for('profile') }}"
+                    class="user-header-name"
+                >
+                    {{ session.get("username") }}님
+                </a>
+
+                <a href="{{ url_for('logout') }}">
+                    로그아웃
+                </a>
+
+            {% else %}
+
+                <a href="{{ url_for('login') }}">
+                    로그인
+                </a>
+
+                <a href="{{ url_for('register') }}">
+                    회원가입
+                </a>
+
+            {% endif %}
+
+        </nav>
+
+    </div>
+
+</header><main><h1>장바구니</h1>{% for item in lines %}<div class="card"><div class="row"><div><strong>{{ item.product_name }}</strong><p class="muted">{{ item.option_name }}</p><p>{{ '{:,}'.format(item.price) }}원 × {{ item.quantity }}개</p></div><div><strong>{{ '{:,}'.format(item.subtotal) }}원</strong><div class="cart-actions">
 <form method="post" action="{{ url_for('update_cart') }}">
 <input type="hidden" name="csrf_token" value="{{ csrf }}">
 <input type="hidden" name="index" value="{{ loop.index0 }}">
