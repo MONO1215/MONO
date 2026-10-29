@@ -1,5 +1,91 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>랜덤 룰렛 | MONO</title><link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"><style>
-.roulette-wrap{max-width:850px;margin:45px auto;padding:0 20px;text-align:center}.roulette-wrap h1{margin-bottom:10px}.roulette-wrap p{color:#666}.roulette-wheel-box{position:relative;width:min(82vw,390px);margin:35px auto}.roulette-pointer{position:absolute;top:-23px;left:50%;transform:translateX(-50%);z-index:2;font-size:38px;color:#222}.roulette-wheel{width:100%;aspect-ratio:1;border-radius:50%;border:9px solid #222;box-shadow:0 10px 25px #0002;transition:transform 5s cubic-bezier(.14,.7,.15,1);background:conic-gradient(#ffdc8d 0deg 60deg,#b7e2f6 60deg 120deg,#ffd1dd 120deg 180deg,#c5efc7 180deg 240deg,#e2d5fa 240deg 300deg,#ffc9a3 300deg 360deg);position:relative}.roulette-label{position:absolute;left:50%;top:50%;font-weight:800;font-size:clamp(14px,4vw,21px);transform:rotate(var(--a)) translateY(-130px) rotate(calc(-1 * var(--a)));transform-origin:center}.roulette-start{border:0;background:#161616;color:white;padding:16px 55px;border-radius:12px;font-size:18px;font-weight:bold;cursor:pointer}.roulette-start:disabled{opacity:.5;cursor:not-allowed}.roulette-result{min-height:45px;font-size:22px;font-weight:bold;margin:25px 0}.roulette-history{margin:25px auto;max-width:450px;text-align:left}.roulette-history li{padding:9px;border-bottom:1px solid #ddd}.roulette-notice{font-size:13px;line-height:1.7}@media(max-width:500px){.roulette-label{transform:rotate(var(--a)) translateY(-29vw) rotate(calc(-1 * var(--a)));font-size:15px}}
-</style></head><body><header><div class="header-container"><a href="/" class="logo">MONO</a><nav><a href="/">홈</a><a href="/products">전체상품</a><a href="{{ url_for('view_cart') }}">장바구니</a><a href="{{ url_for('profile') }}">내 정보</a></nav></div></header><main class="roulette-wrap"><h1>🎲 랜덤 룰렛</h1><p>매일 한 번! 행운의 포인트를 받아보세요.</p><h3>보유 포인트: <span id="balance">{{ '{:,}'.format(balance) }}</span>P</h3><div class="roulette-wheel-box"><div class="roulette-pointer">▼</div><div class="roulette-wheel" id="wheel">{% for value in [0,10,30,50,100,500] %}<span class="roulette-label" style="--a:{{ loop.index0 * 60 + 30 }}deg">{{ value }}P</span>{% endfor %}</div></div><button id="start" class="roulette-start" {% if today_spin %}disabled{% endif %}>{{ '오늘 참여 완료' if today_spin else 'START' }}</button><div id="result" class="roulette-result" aria-live="polite">{% if today_spin %}오늘 {{ today_spin.reward }}P 당첨!{% endif %}</div><p class="roulette-notice">회원당 하루 1회 참여 가능 · 매일 00:00(한국 시간) 초기화<br>0P 40% · 10P 30% · 30P 15% · 50P 10% · 100P 4% · 500P 1%<br>당첨 결과는 서버에서 결정되며 지급된 포인트는 결제에 사용할 수 있습니다.</p><div class="roulette-history"><h3>최근 참여 내역</h3><ul id="history">{% for item in history %}<li>{{ item.spin_date }} — {{ item.reward }}P</li>{% else %}<li>참여 내역이 없습니다.</li>{% endfor %}</ul></div></main><script>
-const start=document.getElementById('start'),wheel=document.getElementById('wheel'),result=document.getElementById('result');let busy=false;const rewards=[0,10,30,50,100,500];start.addEventListener('click',async()=>{if(busy)return;busy=true;start.disabled=true;result.textContent='당첨 결과를 확인하는 중...';try{const body=new URLSearchParams({csrf_token:{{ csrf_token|tojson }}});const response=await fetch({{ url_for('roulette')|tojson }},{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body,credentials:'same-origin'});const data=await response.json();if(!response.ok||!data.ok){result.textContent=data.message||'처리 중 오류가 발생했습니다.';if(response.status!==409)start.disabled=false;return;}const i=rewards.indexOf(data.reward);const center=i*60+30;const degrees=360*6+(360-center);wheel.style.transform=`rotate(${degrees}deg)`;setTimeout(()=>{result.textContent=`🎉 ${data.reward}P 당첨!`;document.getElementById('balance').textContent=Number(data.balance).toLocaleString('ko-KR');start.textContent='오늘 참여 완료';const li=document.createElement('li');li.textContent=`오늘 — ${data.reward}P`;const history=document.getElementById('history');if(history.firstElementChild?.textContent.includes('참여 내역이 없습니다'))history.innerHTML='';history.prepend(li);},5100);}catch(e){result.textContent='네트워크 오류가 발생했습니다. 새로고침하여 참여 여부를 확인해 주세요.';}finally{busy=false;}});
-</script></body></html>
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>랜덤 룰렛 | MONO</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+:root{--ink:#22242b;--gold:#d5a954;--soft:#faf8f4}
+*{box-sizing:border-box}
+.roulette-page{max-width:900px;margin:42px auto 80px;padding:0 18px;text-align:center;color:var(--ink)}
+.roulette-panel{border:1px solid #eee8df;border-radius:30px;background:linear-gradient(160deg,#fff 12%,#fffcf7 100%);padding:40px 24px 34px;box-shadow:0 18px 55px rgba(47,37,22,.07)}
+.roulette-kicker{display:inline-flex;align-items:center;gap:8px;border:1px solid #f1dfb7;background:#fff8e9;color:#8d681f;border-radius:50px;padding:8px 15px;font-size:12px;font-weight:800;letter-spacing:1.4px}
+.roulette-page h1{font-size:clamp(26px,5vw,38px);letter-spacing:-1.3px;margin:17px 0 8px}
+.roulette-sub{margin:0;color:#7b7b83;font-size:15px}
+.roulette-balance{display:inline-flex;gap:8px;align-items:center;justify-content:center;margin:22px 0 6px;padding:12px 20px;border:1px solid #eee9e2;border-radius:15px;background:#fff;box-shadow:0 4px 16px #00000006;font-weight:700}
+.roulette-balance strong{font-size:20px;color:#b18430}
+.roulette-wheel-box{width:min(78vw,420px);aspect-ratio:1;position:relative;margin:37px auto 30px;filter:drop-shadow(0 15px 18px rgba(43,35,26,.16))}
+.roulette-wheel-rim{position:absolute;inset:0;border-radius:50%;background:linear-gradient(145deg,#ffe4a4,#ba8a39 44%,#ffe7ae 70%,#ad7c2b);padding:11px;box-shadow:inset 0 0 0 2px #fff6db,0 0 0 2px #e9d3a7}
+.roulette-wheel{width:100%;height:100%;border-radius:50%;position:relative;overflow:hidden;background:conic-gradient(from 0deg,#ffe5a8 0deg 60deg,#bfe8f2 60deg 120deg,#ffd6df 120deg 180deg,#d2f0d4 180deg 240deg,#e6dcfa 240deg 300deg,#ffcfb2 300deg 360deg);border:3px solid #fff8e9;transition:transform 5s cubic-bezier(.12,.72,.14,1);will-change:transform}
+.roulette-wheel::before{content:"";position:absolute;inset:0;border-radius:50%;background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.8) 0deg 1deg,transparent 1deg 60deg);pointer-events:none}
+.roulette-label{position:absolute;left:50%;top:50%;width:64px;margin-left:-32px;margin-top:-13px;text-align:center;font-size:clamp(15px,3.5vw,21px);font-weight:900;letter-spacing:-.5px;color:#3a3540;transform:rotate(var(--angle)) translateY(calc(-1 * min(28vw,145px))) rotate(calc(-1 * var(--angle)));transform-origin:50% 50%;text-shadow:0 1px 0 #ffffff88}
+.roulette-hub{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:75px;height:75px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#fffef8,#ffe9b6);border:7px solid #d7ab59;box-shadow:0 3px 10px #0002, inset 0 0 0 2px #fff;color:#77521d;font-size:13px;font-weight:950;letter-spacing:1px;z-index:2;pointer-events:none}
+.roulette-pointer{position:absolute;z-index:5;top:-19px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:17px solid transparent;border-right:17px solid transparent;border-top:31px solid #a4772d;filter:drop-shadow(0 2px 2px #0003)}
+.roulette-pointer::before{content:"";position:absolute;top:-36px;left:-8px;width:16px;height:10px;border-radius:5px;background:#d6aa57}
+.roulette-start{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-width:225px;padding:16px 35px;border:0;border-radius:15px;background:linear-gradient(135deg,#26272e,#44404a);color:#fff;font-size:17px;font-weight:850;letter-spacing:.5px;box-shadow:0 9px 18px #28252d30;cursor:pointer;transition:transform .2s,box-shadow .2s}
+.roulette-start:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 13px 22px #28252d3b}
+.roulette-start:disabled{opacity:.6;cursor:not-allowed}
+.roulette-result{min-height:33px;margin:20px 0 0;font-size:19px;font-weight:800;color:#a37728}
+.roulette-notice{margin:22px auto 0;max-width:580px;color:#89858a;font-size:12px;line-height:1.95}
+.roulette-history{max-width:640px;text-align:left;margin:24px auto 0;background:#fff;border:1px solid #eee9e2;border-radius:22px;padding:23px 24px;box-shadow:0 7px 22px #00000005}
+.roulette-history h2{margin:0 0 12px;font-size:18px}
+.roulette-history ul{padding:0;margin:0;list-style:none}.roulette-history li{padding:12px 2px;border-bottom:1px solid #f2f0ed;color:#62626a;font-size:14px}.roulette-history li:last-child{border-bottom:0}
+@media(max-width:540px){.roulette-page{margin-top:22px;padding:0 12px}.roulette-panel{padding:32px 10px 28px;border-radius:22px}.roulette-wheel-box{width:min(82vw,390px);margin-top:35px}.roulette-wheel-rim{padding:8px}.roulette-hub{width:58px;height:58px;border-width:5px;font-size:11px}.roulette-label{transform:rotate(var(--angle)) translateY(calc(-1 * 28vw)) rotate(calc(-1 * var(--angle)));font-size:clamp(13px,3.7vw,18px)}.roulette-history{margin:16px 4px;padding:20px}}
+@media(prefers-reduced-motion:reduce){.roulette-start{transition:none}}
+</style>
+</head>
+<body>
+<header><div class="header-container"><a href="/" class="logo">MONO</a><nav><a href="/">홈</a><a href="/products">전체상품</a><a href="{{ url_for('view_cart') }}">장바구니</a><a href="{{ url_for('profile') }}">내 정보</a></nav></div></header>
+<main class="roulette-page">
+<section class="roulette-panel">
+<div class="roulette-kicker">✦ MONO DAILY EVENT ✦</div>
+<h1>🎲 랜덤 룰렛</h1>
+<p class="roulette-sub">하루 한 번, 오늘의 행운을 돌려보세요!</p>
+<div class="roulette-balance">💰 보유 포인트 <strong><span id="balance">{{ '{:,}'.format(balance) }}</span>P</strong></div>
+<div class="roulette-wheel-box" aria-label="0, 10, 30, 50, 100, 500 포인트 룰렛">
+<div class="roulette-pointer" aria-hidden="true"></div>
+<div class="roulette-wheel-rim"><div class="roulette-wheel" id="wheel">
+{% for value in [0,10,30,50,100,500] %}<span class="roulette-label" style="--angle:{{ loop.index0 * 60 + 30 }}deg">{{ value }}P</span>{% endfor %}
+</div></div><div class="roulette-hub" aria-hidden="true">MONO</div>
+</div>
+<button id="start" class="roulette-start" type="button" {% if today_spin %}disabled{% endif %}>{{ '✓ 오늘 참여 완료' if today_spin else '✦ 룰렛 돌리기' }}</button>
+<div id="result" class="roulette-result" aria-live="polite">{% if today_spin %}🎉 오늘 {{ today_spin.reward }}P 당첨!{% endif %}</div>
+<p class="roulette-notice">회원당 하루 1회 참여 · 매일 00:00(한국 시간) 초기화<br>0P 40% · 10P 30% · 30P 15% · 50P 10% · 100P 4% · 500P 1%<br>당첨 결과는 서버에서 결정되며 지급된 포인트는 결제에 사용할 수 있습니다.</p>
+</section>
+<section class="roulette-history"><h2>🕒 최근 참여 내역</h2><ul id="history">{% for item in history %}<li>{{ item.spin_date }} · <strong>{{ item.reward }}P</strong> 당첨</li>{% else %}<li>참여 내역이 없습니다.</li>{% endfor %}</ul></section>
+</main>
+<script>
+const start=document.getElementById('start');
+const wheel=document.getElementById('wheel');
+const result=document.getElementById('result');
+const rewards=[0,10,30,50,100,500];
+let busy=false, currentRotation=0;
+start.addEventListener('click',async()=>{
+  if(busy||start.disabled)return;
+  busy=true;start.disabled=true;result.textContent='행운의 결과를 확인하고 있어요…';
+  try{
+    const body=new URLSearchParams({csrf_token:{{ csrf_token|tojson }}});
+    const response=await fetch({{ url_for('roulette')|tojson }},{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body,credentials:'same-origin'});
+    const data=await response.json();
+    if(!response.ok||!data.ok){result.textContent=data.message||'처리 중 오류가 발생했습니다.';if(response.status!==409)start.disabled=false;return;}
+    const index=rewards.indexOf(Number(data.reward));
+    if(index<0){result.textContent='결과를 확인하려면 페이지를 새로고침해 주세요.';return;}
+    const center=index*60+30;
+    const target=(360-center)%360;
+    const normalized=((currentRotation%360)+360)%360;
+    const offset=(target-normalized+360)%360;
+    currentRotation+=360*6+offset;
+    wheel.style.transform=`rotate(${currentRotation}deg)`;
+    await new Promise(resolve=>setTimeout(resolve,5100));
+    result.textContent=`🎉 축하합니다! ${data.reward}P 당첨!`;
+    document.getElementById('balance').textContent=Number(data.balance).toLocaleString('ko-KR');
+    start.textContent='✓ 오늘 참여 완료';
+    const history=document.getElementById('history');
+    if(history.firstElementChild?.textContent.includes('참여 내역이 없습니다'))history.innerHTML='';
+    const li=document.createElement('li');li.textContent=`오늘 · ${data.reward}P 당첨`;history.prepend(li);
+  }catch(error){result.textContent='네트워크 오류가 발생했습니다. 새로고침하여 참여 여부를 확인해 주세요.';}
+  finally{busy=false;}
+});
+</script>
+</body></html>
