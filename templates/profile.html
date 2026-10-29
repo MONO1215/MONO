@@ -18,6 +18,23 @@
     >
 
 <style>.header-container{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}.header-container nav{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.header-container nav a{white-space:nowrap}@media(max-width:760px){.header-container nav{gap:10px}}</style>
+
+<style>
+.mono-orders{margin-top:32px}.mono-order-count{color:#777;font-size:13px}
+.mono-order-card{border:1px solid #e5e5e5;border-radius:12px;padding:20px;margin:18px 0;background:#fff}
+.mono-order-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid #eee;padding-bottom:14px}
+.mono-order-head>div{display:flex;flex-direction:column;gap:6px}.mono-order-date{color:#888;font-size:13px}
+.mono-order-status{font-size:13px;font-weight:700;border-radius:20px;background:#f2f2f2;padding:7px 12px}
+.mono-order-status.status-paid{background:#e8f7ed;color:#17743a}.mono-order-status.status-reported{background:#fff4de;color:#91600d}
+.mono-order-status.status-cancelled,.mono-order-status.status-refunded{background:#fcecec;color:#a63232}
+.mono-order-item{display:flex;flex-direction:column;gap:5px;padding:13px 0;border-bottom:1px solid #f2f2f2}
+.mono-order-item span,.mono-order-item small{color:#777;font-size:13px}
+.mono-order-totals{padding-top:12px}.mono-order-totals>div{display:flex;justify-content:space-between;gap:12px;padding:6px 0;font-size:14px}
+.mono-order-totals span{color:#777}.mono-order-totals .mono-order-pay{border-top:1px solid #eee;margin-top:7px;padding-top:13px;font-size:16px}
+.mono-order-totals .mono-order-pay strong{color:#111}.mono-order-empty{text-align:center;color:#777;padding:40px 10px;line-height:2}
+.mono-order-empty a{color:#111;font-weight:700}
+@media(max-width:600px){.mono-order-card{padding:14px}}
+</style>
 </head>
 
 
@@ -368,6 +385,37 @@
 
     </section>
 
+
+
+    <!-- 내 주문 목록 -->
+    <section class="profile-info-box mono-orders" id="my-orders">
+        <div class="profile-info-title"><h2>내 주문 목록</h2><span class="mono-order-count">최근 주문 {{ orders|length }}건</span></div>
+        {% if orders %}
+            {% for order in orders %}
+            <article class="mono-order-card">
+                <div class="mono-order-head">
+                    <div><span class="mono-order-date">{{ order.created_at.strftime('%Y-%m-%d %H:%M') if order.created_at else '-' }}</span>
+                    <strong>주문번호 #{{ order.order_id }}</strong></div>
+                    <span class="mono-order-status status-{{ order.status }}">
+                    {{ {'reported':'입금 확인 중','paid':'결제 완료','cancelled':'취소','refunded':'환불 완료','mixed':'일부 처리 중'}.get(order.status, order.status) }}
+                    </span>
+                </div>
+                {% for item in order.items %}
+                <div class="mono-order-item"><strong>{{ item.name }}</strong><span>{{ item.option }}</span>
+                {% if order.status == 'mixed' %}<small>{{ {'reported':'입금 확인 중','paid':'결제 완료','cancelled':'취소','refunded':'환불 완료'}.get(item.status, item.status) }}</small>{% endif %}
+                </div>
+                {% endfor %}
+                <div class="mono-order-totals">
+                    <div><span>상품금액</span><strong>{{ '{:,}'.format(order.gross_amount) }}원</strong></div>
+                    <div><span>사용 포인트</span><strong>{{ '{:,}'.format(order.point_used) }}P</strong></div>
+                    <div class="mono-order-pay"><span>계좌이체 금액</span><strong>{{ '{:,}'.format(order.amount) }}원</strong></div>
+                </div>
+            </article>
+            {% endfor %}
+        {% else %}
+            <div class="mono-order-empty">아직 주문 내역이 없습니다.<br><a href="{{ url_for('all_products') }}">상품 둘러보기 →</a></div>
+        {% endif %}
+    </section>
 
 </main>
 

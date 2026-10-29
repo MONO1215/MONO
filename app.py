@@ -1083,9 +1083,53 @@ def profile():
             url_for("login")
         )
 
+    # 주문은 반드시 현재 로그인한 회원 ID로 제한한다.
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT id, order_group_id, product_name, option_name,
+                       gross_amount, point_used, amount, status, created_at
+                FROM bank_orders
+                WHERE user_id = %s
+                ORDER BY created_at DESC, id DESC
+                LIMIT 100
+            """, (user_id,))
+            order_rows = cur.fetchall()
+    finally:
+        conn.close()
+
+    # 한 번의 장바구니 결제로 생성된 여러 상품 행을 주문 1건으로 표시한다.
+    orders_by_key = {}
+    for row in order_rows:
+        group_key = str(row["order_group_id"]) if row["order_group_id"] else f'legacy-{row["id"]}'
+        if group_key not in orders_by_key:
+            orders_by_key[group_key] = {
+                "order_id": row["id"],
+                "group_id": group_key,
+                "created_at": row["created_at"],
+                "gross_amount": 0,
+                "point_used": 0,
+                "amount": 0,
+                "items": [],
+                "statuses": set(),
+            }
+        order = orders_by_key[group_key]
+        order["gross_amount"] += row["gross_amount"] if row["gross_amount"] is not None else row["amount"]
+        order["point_used"] += row["point_used"] or 0
+        order["amount"] += row["amount"]
+        order["items"].append({"id": row["id"], "name": row["product_name"],
+                               "option": row["option_name"], "status": row["status"]})
+        order["statuses"].add(row["status"])
+    orders = list(orders_by_key.values())
+    for order in orders:
+        order["status"] = next(iter(order["statuses"])) if len(order["statuses"]) == 1 else "mixed"
+        del order["statuses"]
+
     return render_template(
         "profile.html",
-        user=user
+        user=user,
+        orders=orders
     )
 
 
