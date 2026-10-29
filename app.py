@@ -363,6 +363,22 @@ def init_db():
             )""")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_purchase_reviews_user ON purchase_reviews(user_id, created_at DESC)")
 
+            # 고객센터 1:1 문의 / 관리자 답변
+            cur.execute("""CREATE TABLE IF NOT EXISTS support_tickets (
+                id BIGSERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+                category VARCHAR(30) NOT NULL,
+                subject VARCHAR(120) NOT NULL,
+                content TEXT NOT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'waiting'
+                    CHECK (status IN ('waiting','answered')),
+                admin_reply TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                answered_at TIMESTAMPTZ
+            )""")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_support_tickets_user ON support_tickets(user_id, created_at DESC)")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON support_tickets(status, created_at DESC)")
+
             # 회원별 장바구니: 브라우저 세션이 아닌 DB에 회원 ID로 저장
             cur.execute("""CREATE TABLE IF NOT EXISTS member_cart_items (
                 id BIGSERIAL PRIMARY KEY,
@@ -494,15 +510,68 @@ def home():
 def event_page(event_key):
     pages = {
         "roulette": ("랜덤 룰렛", "룰렛 이벤트를 준비 중입니다. 아직 참여하거나 포인트를 받을 수 없습니다."),
-        "support": ("고객센터", "문의 및 상담 접수 기능을 준비 중입니다."),
         "specials": ("특가 상품", "특가 상품 등록 기능을 준비 중입니다."),
     }
+    if event_key == "support":
+        return redirect(url_for("customer_support"))
     if event_key == "purchase-review":
         return redirect(url_for("purchase_reviews"))
     if event_key not in pages:
         abort(404)
     title, message = pages[event_key]
     return render_template("event_page.html", title=title, message=message)
+
+
+# ==================================================
+# 고객센터: 회원별 비공개 문의 / 관리자 답변
+# ==================================================
+
+@app.route("/support", methods=["GET", "POST"])
+def customer_support():
+    if not session.get("user_logged_in") or not session.get("user_id"):
+        return redirect(url_for("login"))
+    from hmac import compare_digest
+    user_id = session["user_id"]
+    if "support_csrf" not in session:
+        session["support_csrf"] = token_urlsafe(32)
+    error = None
+    if request.method == "POST":
+        if not compare_digest(request.form.get("csrf_token", ""), session["support_csrf"]):
+            abort(403)
+        category = request.form.get("category", "").strip()
+        subject = request.form.get("subject", "").strip()
+        content = request.form.get("content", "").strip()
+        if category not in {"상품", "주문/결제", "배송", "취소/환불", "회원/포인트", "기타"}:
+            error = "문의 유형을 선택해 주세요."
+        elif not (2 <= len(subject) <= 120 and 10 <= len(content) <= 3000):
+            error = "제목은 2~120자, 문의 내용은 10~3000자로 입력해 주세요."
+        else:
+            conn = get_db_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("""INSERT INTO support_tickets (user_id, category, subject, content)
+                                   VALUES (%s, %s, %s, %s)""", (user_id, category, subject, content))
+                conn.commit()
+                return redirect(url_for("customer_support", submitted="1"))
+            except Exception:
+                conn.rollback()
+                app.logger.exception("고객센터 문의 저장 오류")
+                error = "문의 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
+            finally:
+                conn.close()
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""SELECT id, category, subject, content, status, admin_reply,
+                                  created_at, answered_at
+                           FROM support_tickets WHERE user_id=%s
+                           ORDER BY created_at DESC, id DESC LIMIT 100""", (user_id,))
+            tickets = cur.fetchall()
+    finally:
+        conn.close()
+    return render_template("customer_support.html", tickets=tickets, error=error,
+                           submitted=request.args.get("submitted") == "1",
+                           csrf_token=session["support_csrf"])
 
 
 # ==================================================
@@ -1700,6 +1769,59 @@ def admin_logout():
         url_for("admin_login")
     )
 
+
+
+@app.route("/admin/support", methods=["GET", "POST"])
+@admin_login_required
+def admin_support():
+    from hmac import compare_digest
+    if "support_admin_csrf" not in session:
+        session["support_admin_csrf"] = token_urlsafe(32)
+    error = None
+    if request.method == "POST":
+        if not compare_digest(request.form.get("csrf_token", ""), session["support_admin_csrf"]):
+            abort(403)
+        try:
+            ticket_id = int(request.form.get("ticket_id", ""))
+        except (TypeError, ValueError):
+            ticket_id = 0
+        reply = request.form.get("reply", "").strip()
+        if ticket_id <= 0 or not (2 <= len(reply) <= 3000):
+            error = "답변은 2~3000자로 입력해 주세요."
+        else:
+            conn = get_db_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("""UPDATE support_tickets
+                                   SET admin_reply=%s, status='answered', answered_at=NOW()
+                                   WHERE id=%s RETURNING id""", (reply, ticket_id))
+                    updated = cur.fetchone()
+                if updated:
+                    conn.commit()
+                    return redirect(url_for("admin_support", saved="1"))
+                conn.rollback()
+                error = "해당 문의를 찾을 수 없습니다."
+            except Exception:
+                conn.rollback()
+                app.logger.exception("고객센터 답변 저장 오류")
+                error = "답변 저장 중 오류가 발생했습니다."
+            finally:
+                conn.close()
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""SELECT t.id, t.category, t.subject, t.content, t.status,
+                                  t.admin_reply, t.created_at, t.answered_at,
+                                  u.username, u.name
+                           FROM support_tickets t JOIN users u ON u.id=t.user_id
+                           ORDER BY CASE WHEN t.status='waiting' THEN 0 ELSE 1 END,
+                                    t.created_at DESC, t.id DESC LIMIT 200""")
+            tickets = cur.fetchall()
+    finally:
+        conn.close()
+    return render_template("admin_support.html", tickets=tickets, error=error,
+                           saved=request.args.get("saved") == "1",
+                           csrf_token=session["support_admin_csrf"])
 
 
 # ==================================================
